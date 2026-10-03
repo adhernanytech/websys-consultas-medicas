@@ -1,261 +1,179 @@
-import { useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   obterUsuarios,
-  guardarUsuarioAutenticado
-} from "../data/usuarios"
+  guardarUsuarioAutenticado,
+  obterTipoUsuario,
+} from "../data/usuarios";
 
+import { obterMedicoDaConta } from "../data/medicos";
 
 function Login() {
-
-  const navegar = useNavigate()
-  const location = useLocation()
-
+  const navegar = useNavigate();
+  const location = useLocation();
 
   const [formulario, setFormulario] = useState({
     email: "",
-    senha: ""
-  })
+    senha: "",
+  });
 
-
-  const [mensagem, setMensagem] = useState("")
-  const [tipoMensagem, setTipoMensagem] = useState("")
-  const [mostrarSenha, setMostrarSenha] = useState(false)
-
-  const [carregando, setCarregando] = useState(false)
-  const [carregandoGoogle, setCarregandoGoogle] = useState(false)
-
-
-  /*
-     ALTERAR CAMPOS
-  */
+  const [mensagem, setMensagem] = useState("");
+  const [tipoMensagem, setTipoMensagem] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [carregandoGoogle, setCarregandoGoogle] = useState(false);
 
   function alterarCampo(evento) {
+    const { name, value } = evento.target;
 
-    const { name, value } = evento.target
+    setFormulario((anterior) => ({
+      ...anterior,
+      [name]: value,
+    }));
 
-    setFormulario((estadoAnterior) => ({
-      ...estadoAnterior,
-      [name]: value
-    }))
-
-    setMensagem("")
-    setTipoMensagem("")
+    setMensagem("");
+    setTipoMensagem("");
   }
-
-
-  /*
-     FAZER LOGIN
-  */
 
   function fazerLogin(evento) {
+    evento.preventDefault();
 
-    evento.preventDefault()
+    setMensagem("");
+    setTipoMensagem("");
 
-    setMensagem("")
-    setTipoMensagem("")
+    const email = formulario.email.trim().toLowerCase();
+    const senha = formulario.senha;
 
-
-    /*
-       VALIDAR EMAIL
-    */
-
-    const email =
-      formulario.email.trim().toLowerCase()
-
-
-    if (email === "") {
-
-      setMensagem("Digite o seu email.")
-      setTipoMensagem("erro")
-
-      return
+    if (!email) {
+      setMensagem("Digite o seu email.");
+      setTipoMensagem("erro");
+      return;
     }
 
-
-    const emailValido =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
+    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailValido.test(email)) {
-
-      setMensagem("Digite um email válido.")
-      setTipoMensagem("erro")
-
-      return
+      setMensagem("Digite um email válido.");
+      setTipoMensagem("erro");
+      return;
     }
 
-
-    /*
-       VALIDAR PALAVRA-PASSE
-    */
-
-    if (formulario.senha.trim() === "") {
-
-      setMensagem(
-        "Digite a sua palavra-passe."
-      )
-
-      setTipoMensagem("erro")
-
-      return
+    if (!senha) {
+      setMensagem("Digite a sua palavra-passe.");
+      setTipoMensagem("erro");
+      return;
     }
 
+    setCarregando(true);
 
-    if (formulario.senha.length < 6) {
+    try {
+      const usuarios = obterUsuarios();
 
-      setMensagem(
-        "A palavra-passe deve ter pelo menos 6 caracteres."
-      )
-
-      setTipoMensagem("erro")
-
-      return
-    }
-
-
-    setCarregando(true)
-
-    setMensagem("A verificar os seus dados...")
-    setTipoMensagem("sucesso")
-
-
-    /*
-       OBTER UTILIZADORES REGISTADOS
-    */
-
-    const usuarios =
-      obterUsuarios()
-
-
-    /*
-       PROCURAR UTILIZADOR PELO EMAIL
-    */
-
-    const usuario =
-      usuarios.find(
+      const usuario = usuarios.find(
         (item) =>
-          item.email?.toLowerCase() === email
-      )
+          String(item.email || "").trim().toLowerCase() === email
+      );
 
-
-    /*
-       VERIFICAR EMAIL E PALAVRA-PASSE
-    */
-
-    if (
-      !usuario ||
-      usuario.senha !== formulario.senha
-    ) {
-
-      setCarregando(false)
-
-      setMensagem(
-        "Email ou palavra-passe incorrectos."
-      )
-
-      setTipoMensagem("erro")
-
-      return
-    }
-
-
-    /*
-       VERIFICAR SE A CONTA ESTÁ ACTIVA
-    */
-
-    if (usuario.ativo === false) {
-
-      setCarregando(false)
-
-      setMensagem(
-        "A sua conta encontra-se desactivada. Contacte o administrador."
-      )
-
-      setTipoMensagem("erro")
-
-      return
-    }
-
-
-    /*
-       GUARDAR UTILIZADOR AUTENTICADO
-    */
-
-    guardarUsuarioAutenticado(usuario)
-
-
-    setMensagem(
-      "Login realizado com sucesso!"
-    )
-
-    setTipoMensagem("sucesso")
-
-
-    /*
-       REDIRECCIONAR
-    */
-
-    setTimeout(() => {
-
-      setCarregando(false)
-
-
-      /*
-         Se no futuro uma rota protegida
-         mandar o utilizador para o login,
-         podemos devolvê-lo para essa rota.
-      */
-
-      const destino =
-        location.state?.from?.pathname
-
-
-      if (destino) {
-
-        navegar(
-          destino,
-          { replace: true }
-        )
-
-        return
+      if (
+        !usuario ||
+        (usuario.senha !== senha &&
+          usuario.password !== senha)
+      ) {
+        setMensagem("Email ou palavra-passe incorrectos.");
+        setTipoMensagem("erro");
+        return;
       }
 
-
-      /*
-         PACIENTE
-      */
-
-      if (usuario.tipo === "paciente") {
-
-        navegar(
-          "/paciente/dashboard",
-          { replace: true }
-        )
-
-        return
+      if (usuario.ativo === false) {
+        setMensagem(
+          "A sua conta encontra-se desactivada. Contacte o administrador."
+        );
+        setTipoMensagem("erro");
+        return;
       }
 
+      const tipo = obterTipoUsuario(usuario);
 
-      /*
-         MÉDICO / ADMINISTRADOR
-         
-         Estas áreas serão implementadas
-         posteriormente.
-      */
+      if (!["paciente", "medico", "admin"].includes(tipo)) {
+        setMensagem("Esta conta tem um tipo de utilizador inválido.");
+        setTipoMensagem("erro");
+        return;
+      }
 
-      navegar("/", { replace: true })
+      guardarUsuarioAutenticado({
+        ...usuario,
+        role: tipo,
+        tipo,
+      });
 
-    }, 900)
+      const destinoSolicitado = location.state?.from?.pathname;
+
+      // O destino original só será respeitado se corresponder
+      // à área autorizada para este tipo de utilizador.
+      if (destinoSolicitado) {
+        if (
+          destinoSolicitado.startsWith("/admin") &&
+          tipo === "admin"
+        ) {
+          navegar(destinoSolicitado, { replace: true });
+          return;
+        }
+
+        if (
+          destinoSolicitado.startsWith("/medico") &&
+          tipo === "medico"
+        ) {
+          const perfil = obterMedicoDaConta(usuario.id);
+
+          navegar(
+            perfil
+              ? destinoSolicitado
+              : "/medico/perfil-pendente",
+            { replace: true }
+          );
+          return;
+        }
+
+        if (
+          destinoSolicitado.startsWith("/paciente") &&
+          tipo === "paciente"
+        ) {
+          navegar(destinoSolicitado, { replace: true });
+          return;
+        }
+      }
+
+      if (tipo === "admin") {
+        navegar("/admin/dashboard", { replace: true });
+        return;
+      }
+
+      if (tipo === "medico") {
+        const perfil = obterMedicoDaConta(usuario.id);
+
+        navegar(
+          perfil
+            ? "/medico/dashboard"
+            : "/medico/perfil-pendente",
+          { replace: true }
+        );
+        return;
+      }
+
+      navegar("/paciente/dashboard", { replace: true });
+    } catch (erro) {
+      setMensagem(
+        erro.message || "Não foi possível iniciar sessão."
+      );
+      setTipoMensagem("erro");
+    } finally {
+      setCarregando(false);
+    }
   }
 
-
-  /*
-     LOGIN COM GOOGLE
-  */
-
-  function loginComGoogle() {
+    function loginComGoogle() {
 
     setCarregandoGoogle(true)
 
@@ -276,82 +194,23 @@ function Login() {
     }, 1000)
   }
 
-
   return (
-
-    <main className="
-      min-h-screen
-      bg-gray-100
-      flex
-      items-center
-      justify-center
-      px-4
-      sm:px-6
-      py-8
-      sm:py-10
-    ">
-
-      <div className="
-        w-full
-        max-w-5xl
-        grid
-        grid-cols-1
-        lg:grid-cols-2
-        bg-white
-        rounded-2xl
-        shadow-xl
-        overflow-hidden
-      ">
-
-
-        {/* Área de apresentação */}
-
-        <section className="
-          hidden
-          lg:flex
-          bg-primaria
-          text-white
-          p-9
-          xl:p-10
-          flex-col
-          justify-between
-        ">
-
+    <main className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 bg-white rounded-2xl shadow-xl overflow-hidden">
+        <section className="hidden lg:flex bg-primaria text-white p-9 flex-col justify-between">
           <div>
-
             <div className="flex items-center gap-3">
-
-              <div className="
-                w-11
-                h-11
-                bg-white
-                rounded-xl
-                flex
-                items-center
-                justify-center
-              ">
-
-                <span className="text-texto font-bold text-lg">
-                  M
-                </span>
-
+              <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center">
+                <span className="text-texto font-bold text-lg">M</span>
               </div>
 
-
               <div>
-
-                <p className="font-bold text-base">
-                  Sistema Médico
-                </p>
-
+                <p className="font-bold">Sistema Médico</p>
                 <p className="text-blue-100 text-xs">
                   Marcação de consultas online
                 </p>
-
               </div>
-
             </div>
-
 
             <div className="mt-12 max-w-md">
 
@@ -449,95 +308,33 @@ function Login() {
               </div>
 
             </div>
-
           </div>
 
-
-          <div className="mt-8">
-
-            <p className="text-blue-100 text-xs">
-              A sua saúde merece cuidado e organização.
-            </p>
-
-          </div>
-
+          <p className="text-blue-100 text-xs">
+            A sua saúde merece cuidado e organização.
+          </p>
         </section>
 
-
-        {/* Área de Login */}
-
-        <section className="
-          p-6
-          sm:p-8
-          lg:p-9
-          xl:p-10
-        ">
-
+        <section className="p-6 sm:p-8 lg:p-9">
           <div className="text-center">
-
-            <div className="
-              mx-auto
-              w-12
-              h-12
-              bg-primaria/10
-              rounded-xl
-              flex
-              items-center
-              justify-center
-            ">
-
-              <span className="text-texto font-bold text-lg">
-                M
-              </span>
-
+            <div className="mx-auto w-12 h-12 bg-primaria/10 rounded-xl flex items-center justify-center">
+              <span className="text-texto font-bold text-lg">M</span>
             </div>
 
-
-            <h1 className="
-              text-2xl
-              sm:text-3xl
-              font-bold
-              text-texto
-              mt-4
-            ">
+            <h1 className="text-2xl sm:text-3xl font-bold text-texto mt-4">
               Bem-vindo de volta
             </h1>
 
-
-            <p className="
-              text-texto-secundario
-              text-sm
-              mt-2
-            ">
+            <p className="text-texto-secundario text-sm mt-2">
               Entre na sua conta para gerir as suas consultas.
             </p>
-
           </div>
 
-
-          <form
-            onSubmit={fazerLogin}
-            className="mt-7"
-          >
-
-
-            {/* Email */}
-
+          <form onSubmit={fazerLogin} className="mt-7">
             <div>
-
-              <label
-                htmlFor="email"
-                className="
-                  block
-                  text-texto
-                  text-sm
-                  font-medium
-                  mb-2
-                "
-              >
+              <label htmlFor="email" className="block text-texto text-sm font-medium mb-2">
                 Email
               </label>
-
 
               <input
                 id="email"
@@ -547,266 +344,109 @@ function Login() {
                 onChange={alterarCampo}
                 placeholder="exemplo@email.com"
                 autoComplete="email"
-                className="
-                  w-full
-                  border
-                  border-borda
-                  rounded-lg
-                  px-4
-                  py-2.5
-                  text-sm
-                  outline-none
-                  focus:ring-2
-                  focus:ring-primaria
-                "
+                required
+                className="w-full border border-borda rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primaria"
               />
-
             </div>
 
-
-            {/* Palavra-passe */}
-
             <div className="mt-4">
-
-              <label
-                htmlFor="senha"
-                className="
-                  block
-                  text-texto
-                  text-sm
-                  font-medium
-                  mb-2
-                "
-              >
+              <label htmlFor="senha" className="block text-texto text-sm font-medium mb-2">
                 Palavra-passe
               </label>
 
-
               <div className="relative">
-
                 <input
                   id="senha"
-                  type={
-                    mostrarSenha
-                      ? "text"
-                      : "password"
-                  }
+                  type={mostrarSenha ? "text" : "password"}
                   name="senha"
                   value={formulario.senha}
                   onChange={alterarCampo}
                   placeholder="Digite a sua palavra-passe"
                   autoComplete="current-password"
-                  className="
-                    w-full
-                    border
-                    border-borda
-                    rounded-lg
-                    px-4
-                    py-2.5
-                    pr-20
-                    text-sm
-                    outline-none
-                    focus:ring-2
-                    focus:ring-primaria
-                  "
+                  required
+                  className="w-full border border-borda rounded-lg px-4 py-2.5 pr-20 text-sm outline-none focus:ring-2 focus:ring-primaria"
                 />
 
-
                 <button
                   type="button"
-                  onClick={() =>
-                    setMostrarSenha(!mostrarSenha)
-                  }
-                  className="
-                    absolute
-                    right-3
-                    top-1/2
-                    -translate-y-1/2
-                    text-sm
-                    text-texto
-                    hover:underline
-                    cursor-pointer
-                  "
+                  onClick={() => setMostrarSenha((valor) => !valor)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm hover:underline"
                 >
-                  {mostrarSenha
-                    ? "Ocultar"
-                    : "Mostrar"
-                  }
+                  {mostrarSenha ? "Ocultar" : "Mostrar"}
                 </button>
-
               </div>
 
-
               <div className="text-right mt-2">
-
                 <button
                   type="button"
-                  className="
-                    text-xs
-                    text-texto
-                    hover:underline
-                    cursor-pointer
-                  "
+                  onClick={() => {
+                    setMensagem(
+                      "A recuperação de palavra-passe será implementada posteriormente."
+                    );
+                    setTipoMensagem("sucesso");
+                  }}
+                  className="text-xs hover:underline"
                 >
                   Esqueceu a palavra-passe?
                 </button>
-
               </div>
-
             </div>
 
-
-            {/* Mensagem */}
-
             {mensagem && (
-
               <div
-                className={`
-                  mt-4
-                  px-4
-                  py-2.5
-                  rounded-lg
-                  text-sm
-
-                  ${
-                    tipoMensagem === "erro"
-                      ? "bg-red-50 border border-red-200 text-erro"
-                      : "bg-green-50 border border-green-200 text-sucesso"
-                  }
-                `}
+                role="status"
+                className={`mt-4 px-4 py-2.5 rounded-lg text-sm ${
+                  tipoMensagem === "erro"
+                    ? "bg-red-50 border border-red-200 text-erro"
+                    : "bg-green-50 border border-green-200 text-sucesso"
+                }`}
               >
                 {mensagem}
               </div>
-
             )}
-
-
-            {/* Entrar */}
 
             <button
               type="submit"
               disabled={carregando}
-              className="
-                w-full
-                mt-5
-                bg-primaria
-                text-white
-                py-2.5
-                rounded-lg
-                font-medium
-                text-sm
-                hover:bg-primaria-hover
-                border-0
-                cursor-pointer
-                disabled:bg-primaria-fraca
-                disabled:cursor-not-allowed
-              "
+              className="w-full mt-5 bg-primaria text-white py-2.5 rounded-lg font-medium text-sm hover:bg-primaria-hover disabled:opacity-60"
             >
-              {carregando
-                ? "A verificar..."
-                : "Entrar"
-              }
+              {carregando ? "A verificar..." : "Entrar"}
             </button>
 
-
-            {/* Separador */}
-
-            <div className="
-              flex
-              items-center
-              gap-4
-              my-5
-            ">
-
+            <div className="flex items-center gap-4 my-5">
               <div className="flex-1 h-px bg-gray-300" />
-
-              <span className="text-xs text-gray-500">
-                ou
-              </span>
-
+              <span className="text-xs text-gray-500">ou</span>
               <div className="flex-1 h-px bg-gray-300" />
-
             </div>
-
-
-            {/* Google */}
 
             <button
               type="button"
               onClick={loginComGoogle}
               disabled={carregandoGoogle}
-              className="
-                w-full
-                border
-                border-gray-300
-                bg-white
-                text-texto-secundario
-                py-2.5
-                rounded-lg
-                font-medium
-                text-sm
-                hover:bg-gray-50
-                flex
-                items-center
-                justify-center
-                gap-3
-                cursor-pointer
-                disabled:bg-gray-100
-                disabled:cursor-not-allowed
-              "
+              className="w-full border border-gray-300 bg-white py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 flex items-center justify-center gap-3"
             >
-
-              <span className="font-bold">
-                G
-              </span>
-
+              <span className="font-bold">G</span>
               {carregandoGoogle
-                ? "A ligar ao Google"
-                : "Continuar com Google"
-              }
-
+                ? "A ligar ao Google..."
+                : "Continuar com Google"}
             </button>
-
           </form>
 
-
-          {/* Criar conta */}
-
-          <p className="
-            text-center
-            text-texto-secundario
-            text-sm
-            mt-5
-          ">
+          <p className="text-center text-texto-secundario text-sm mt-5">
             Ainda não tem uma conta?
           </p>
-
 
           <button
             type="button"
             onClick={() => navegar("/registro")}
-            className="
-              w-full
-              mt-2.5
-              border
-              border-borda
-              text-texto-secundario
-              py-2.5
-              rounded-lg
-              text-sm
-              hover:bg-gray-50
-              cursor-pointer
-            "
+            className="w-full mt-2.5 border border-borda py-2.5 rounded-lg text-sm hover:bg-gray-50"
           >
             Criar uma conta
           </button>
-
         </section>
-
       </div>
-
     </main>
-  )
+  );
 }
 
-export default Login
+export default Login;

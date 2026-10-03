@@ -2,10 +2,9 @@ import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 
 import {
-  obterUsuarios,
-  guardarUsuarios,
-  guardarUsuarioAutenticado
-} from "../data/usuarios"
+  criarUsuario,
+  guardarUsuarioAutenticado,
+} from "../data/usuarios";
 
 import { prepararImagem } from "../utils/imagem"
 
@@ -132,8 +131,7 @@ function Registro() {
       return
     }
 
-    const emailValido =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailValido.test(formulario.email.trim())) {
       setMensagem("Digite um email válido.")
@@ -227,55 +225,27 @@ function Registro() {
     setTipoMensagem("sucesso")
 
     try {
-
-      const novoUsuario = {
-        id: `usr_${Date.now()}_${Math.random()
-          .toString(36)
-          .slice(2, 8)}`,
-
+      const novoUsuario = criarUsuario({
         nome: formulario.nome.trim(),
-
-        email: emailNormalizado,
-
-        telefone:
-          formulario.telefone.trim(),
-
+        email: formulario.email.trim().toLowerCase(),
+        telefone: formulario.telefone.trim(),
         senha: formulario.senha,
-
         tipo: "paciente",
-
+        role: "paciente",
         foto: previsualizacaoFoto || null,
-
         ativo: true,
-
         aceitouTermos: true,
+        criadoEm: new Date().toISOString(),
+      });
 
-        criadoEm:
-          new Date().toISOString()
-      }
+      guardarUsuarioAutenticado(novoUsuario);
 
-      const novosUsuarios = [
-        ...usuariosExistentes,
-        novoUsuario
-      ]
-
-      guardarUsuarios(novosUsuarios)
-
-      /*
-        Guardar uma cópia da sessão actual.
-      */
-      guardarUsuarioAutenticado(novoUsuario)
-
-      setMensagem(
-        "Conta criada com sucesso!"
-      )
-
-      setTipoMensagem("sucesso")
+      setMensagem("Conta criada com sucesso!");
+      setTipoMensagem("sucesso");
 
       setTimeout(() => {
-        navegar("/paciente/dashboard")
-      }, 1200)
-
+        navegar("/paciente/dashboard", { replace: true });
+      }, 800);
     } catch (erro) {
 
       console.error(erro)
@@ -346,10 +316,9 @@ function Registro() {
               p-4
               rounded-lg
               text-sm
-              ${
-                tipoMensagem === "erro"
-                  ? "bg-red-50 text-erro"
-                  : "bg-green-50 text-sucesso"
+              ${tipoMensagem === "erro"
+                ? "bg-red-50 text-erro"
+                : "bg-green-50 text-sucesso"
               }
             `}
           >

@@ -2,9 +2,9 @@ import { Navigate, Outlet, useLocation } from "react-router-dom"
 
 import {
   obterUsuarioAutenticado
-} from "../data/usuarios"
+} from "../../data/usuarios"
 
-function RotaProtegida() {
+function RotaPacienteProtegida() {
 
   const location = useLocation()
 
@@ -25,4 +25,4 @@ function RotaProtegida() {
   return <Outlet />
 }
 
-export default RotaProtegida
+export default RotaPacienteProtegida

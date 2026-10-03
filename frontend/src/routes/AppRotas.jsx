@@ -8,8 +8,9 @@ import PacienteLayout from "../paciente/layouts/PacienteLayout"
 import ScrollToTop from "../components/ScrollPraCima"
 
 /* Proteção rotas */
-import RotaProtegida from "../components/RotaProtegida"
+import RotaPacienteProtegida from "../components/paciente/RotaPacienteProtegida"
 import RotaMedicoProtegida from "../components/medico/RotaMedicoProtegida"
+import RotaAdminProtegida from "../components/admin/RotaAdminProtegida"
 
 /* Páginas públicas */
 import Home from "../pages/Home"
@@ -31,6 +32,12 @@ import DetalhesConsulta from "../paciente/pages/DetalhesConsulta"
 import DashboardMedico from "../medico/pages/DashboardMedico"
 import GerirDisponibilidade from "../medico/pages/GerirDisponibilidade"
 import PerfilMedicoPendente from "../medico/pages/PerfilMedicoPendente"
+
+/* Páginas do admin */
+import DashboardAdmin from "../administrador/pages/DashboardAdmin"
+import ConfigurarAdmin from "../administrador/pages/ConfigurarAdmin"
+import GerirContasMedicas from "../administrador/pages/GerirContasMedicas"
+
 
 
 function AppRotas() {
@@ -91,7 +98,7 @@ function AppRotas() {
             ÁREA DO PACIENTE - ASSIM FICA PROTEGIDA
         */}
 
-        <Route element={<RotaProtegida />}>
+        <Route element={<RotaPacienteProtegida />}>
 
           <Route element={<PacienteLayout />}>
 
@@ -151,14 +158,34 @@ function AppRotas() {
             path="/medico/disponibilidades"
             element={<GerirDisponibilidade />}
           />
+          
+          {/* Conta médica ainda sem perfil associado */}
+
+          <Route
+            path="/medico/perfil-pendente"
+            element={<PerfilMedicoPendente />}
+          />
         </Route>
 
-        {/* Conta médica ainda sem perfil associado */}
 
+        {/* Configuração inicial do administrador */}
         <Route
-          path="/medico/perfil-pendente"
-          element={<PerfilMedicoPendente />}
+          path="/admin/configurar"
+          element={<ConfigurarAdmin />}
         />
+
+        {/* Área administrativa protegida */}
+        <Route element={<RotaAdminProtegida />}>
+          <Route
+            path="/admin/dashboard"
+            element={<DashboardAdmin />}
+          />
+
+          <Route
+            path="/admin/contas-medicas"
+            element={<GerirContasMedicas />}
+          />
+        </Route>
 
       </Routes>
 

@@ -48,7 +48,7 @@ export default function DashboardMedico() {
         </p>
 
         <h1 className="mt-1 text-3xl font-bold text-texto">
-          Bem-vindo, {medico.nome}
+          Bem-vindo/a, {medico.nome}
         </h1>
 
         <p className="mt-2 text-texto-secundario">
@@ -86,7 +86,7 @@ export default function DashboardMedico() {
       </section>
 
       <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-6">
-        <h2 className="text-xl font-semibold">
+        <h2 className="text-xl text-texto font-semibold">
           Gestão da agenda
         </h2>
 
@@ -96,7 +96,7 @@ export default function DashboardMedico() {
 
         <Link
           to="/medico/disponibilidades"
-          className="mt-5 inline-flex rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+          className="mt-5 inline-flex rounded-lg bg-primaria px-5 py-3 font-semibold text-white hover:bg-primaria-hover"
         >
           Gerir disponibilidades
         </Link>
