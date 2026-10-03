@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+:root {
+  /* Fundos */
+  --cor-fundo: #f8fafc;
+  --cor-fundo-secundario: #ffffff;
+  --cor-fundo-terciario: #f0fdfa;
+
+  /* Textos */
+  --cor-texto: #134e4a;
+  --cor-texto-secundario: #475569;
+  --cor-texto-terciario: #d3d3d3;
+  --cor-texto-suave: #94a3b8;
+
+  /* Cores principais */
+  --cor-primaria: #0f766e;
+  --cor-primaria-fraca: #1b9b90;
+  --cor-primaria-hover: #115e59;
+  --cor-primaria-suave: #ccfbf1;
+
+  /* Cor secundária */
+  --cor-secundaria: #14b8a6;
+  --cor-secundaria-suave: #ccfbf1;
+
+  /* Bordas */
+  --cor-borda: #e2e8f0;
+
+  /* Estados */
+  --cor-sucesso: #16a34a;
+  --cor-aviso: #f59e0b;
+  --cor-erro: #dc2626;
+  --cor-info: #0284c7;
+}
+
+@theme {
+  --color-fundo: var(--cor-fundo);
+  --color-fundo-secundario: var(--cor-fundo-secundario);
+  --color-fundo-terciario: var(--cor-fundo-terciario);
+
+  --color-texto: var(--cor-texto);
+  --color-texto-secundario: var(--cor-texto-secundario);
+  --color-texto-terciario: var(--cor-texto-terciario);
+  --color-texto-suave: var(--cor-texto-suave);
+
+  --color-primaria: var(--cor-primaria);
+  --color-primaria-fraca: var(--cor-primaria-fraca);
+  --color-primaria-hover: var(--cor-primaria-hover);
+  --color-primaria-suave: var(--cor-primaria-suave);
+
+  --color-secundaria: var(--cor-secundaria);
+  --color-secundaria-suave: var(--cor-secundaria-suave);
+
+  --color-borda: var(--cor-borda);
+
+  --color-sucesso: var(--cor-sucesso);
+  --color-aviso: var(--cor-aviso);
+  --color-erro: var(--cor-erro);
+  --color-info: var(--cor-info);
+}
