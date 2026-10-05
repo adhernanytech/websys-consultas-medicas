@@ -71,6 +71,17 @@ const medicosIniciais = [
       "Avaliação e acompanhamento de condições neurológicas.",
     ativo: true,
   },
+  {
+    id: 7,
+    usuarioId: null,
+    nome: "Dr. Franklin Hernández",
+    especialidade: "Ortopedia",
+    especialidadeId: 4,
+    experiencia: "8 anos de experiência",
+    biografia:
+      "Avaliação e acompanhamento de condições ósseas.",
+    ativo: true,
+  },
 ];
 
 const CHAVE_MEDICOS = "medicos";

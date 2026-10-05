@@ -6,6 +6,10 @@ import {
 } from "../../data/medicos";
 
 import {
+  obterConsultas,
+} from "../../data/consultas";
+
+import {
   obterAgendaDoMedico,
   adicionarDisponibilidade,
   removerDisponibilidade,
@@ -101,7 +105,11 @@ export default function GerirDisponibilidade() {
     if (!confirmar) return;
 
     try {
-      removerDisponibilidade(id, medico.id);
+      removerDisponibilidade(
+        id,
+        medico.id,
+        obterConsultas()
+      );
 
       setSucesso("Disponibilidade removida.");
       carregarAgenda();
@@ -144,11 +152,11 @@ export default function GerirDisponibilidade() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
       <header className="mb-7">
-        <p className="text-sm text-blue-700">
+        <p className="text-sm text-texto">
           Área do médico
         </p>
 
-        <h1 className="mt-1 text-3xl font-bold text-gray-900">
+        <h1 className="mt-1 text-3xl font-bold text-texto">
           Gerir disponibilidades
         </h1>
 
@@ -245,7 +253,7 @@ export default function GerirDisponibilidade() {
           <div className="sm:col-span-2">
             <button
               type="submit"
-              className="w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+              className="w-full rounded-lg bg-primaria px-5 py-3 font-semibold text-white hover:bg-primaria-hover"
             >
               Registar disponibilidade
             </button>

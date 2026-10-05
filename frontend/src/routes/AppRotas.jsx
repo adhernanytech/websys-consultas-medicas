@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 
 /* Layouts */
 import LayoutPublico from "../layouts/LayoutPublico"
-import PacienteLayout from "../paciente/layouts/PacienteLayout"
+import LayoutPaciente from "../paciente/layouts/LayoutPaciente"
+import LayoutMedico from "../medico/layout/LayoutMedico";
 
 /* ROLAGEM */
 import ScrollToTop from "../components/ScrollPraCima"
@@ -32,6 +33,7 @@ import DetalhesConsulta from "../paciente/pages/DetalhesConsulta"
 import DashboardMedico from "../medico/pages/DashboardMedico"
 import GerirDisponibilidade from "../medico/pages/GerirDisponibilidade"
 import PerfilMedicoPendente from "../medico/pages/PerfilMedicoPendente"
+import MinhaAgendaMedico from "../medico/pages/MinhaAgendaMedico"
 
 /* Páginas do admin */
 import DashboardAdmin from "../administrador/pages/DashboardAdmin"
@@ -100,7 +102,7 @@ function AppRotas() {
 
         <Route element={<RotaPacienteProtegida />}>
 
-          <Route element={<PacienteLayout />}>
+          <Route element={<LayoutPaciente />}>
 
             <Route
               path="/paciente/dashboard"
@@ -146,26 +148,36 @@ function AppRotas() {
 
         </Route>
 
+
         {/* ÁREA DO MÉDICO */}
-
         <Route element={<RotaMedicoProtegida />}>
-          <Route
-            path="/medico/dashboard"
-            element={<DashboardMedico />}
-          />
+          <Route element={<LayoutMedico />}>
 
-          <Route
-            path="/medico/disponibilidades"
-            element={<GerirDisponibilidade />}
-          />
-          
-          {/* Conta médica ainda sem perfil associado */}
+            <Route
+              path="/medico/dashboard"
+              element={<DashboardMedico />}
+            />
 
-          <Route
-            path="/medico/perfil-pendente"
-            element={<PerfilMedicoPendente />}
-          />
+            <Route
+              path="/medico/agenda"
+              element={<MinhaAgendaMedico />}
+            />
+
+            <Route
+              path="/medico/disponibilidades"
+              element={<GerirDisponibilidade />}
+            />
+
+            {/* Conta médica ainda sem perfil associado */}
+
+            <Route
+              path="/medico/perfil-pendente"
+              element={<PerfilMedicoPendente />}
+            />
+
+          </Route>
         </Route>
+
 
 
         {/* Configuração inicial do administrador */}
