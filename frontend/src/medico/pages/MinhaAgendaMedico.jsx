@@ -1,297 +1,375 @@
-import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router-dom"
 
-import { obterMedicoAutenticado } from "../../data/medicos";
-import { obterConsultasDoMedico } from "../../data/consultas";
+import { obterMedicoAutenticado } from "../../data/medicos"
+import { obterConsultasDoMedico } from "../../data/consultas"
 
 function obterDataHoje() {
-  const agora = new Date();
+  const hoje = new Date()
 
-  const ano = agora.getFullYear();
-  const mes = String(agora.getMonth() + 1).padStart(2, "0");
-  const dia = String(agora.getDate()).padStart(2, "0");
+  const ano = hoje.getFullYear()
+  const mes = String(
+    hoje.getMonth() + 1
+  ).padStart(2, "0")
+  const dia = String(
+    hoje.getDate()
+  ).padStart(2, "0")
 
-  return `${ano}-${mes}-${dia}`;
+  return `${ano}-${mes}-${dia}`
 }
 
 function formatarData(data) {
-  if (!data) return "Data não definida";
+  if (!data) {
+    return "Data não disponível"
+  }
 
-  const partes = String(data).split("-");
+  const partes = String(data).split("-")
 
-  if (partes.length !== 3) return data;
+  if (partes.length !== 3) {
+    return data
+  }
 
-  return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  return `${partes[2]}/${partes[1]}/${partes[0]}`
 }
 
 function EstadoConsulta({ estado }) {
-  const estilos = {
-    Agendada: "bg-blue-50 text-aviso",
-    Realizada: "bg-green-50 text-sucesso",
-    Cancelada: "bg-red-50 text-erro",
-  };
+  const classes = {
+    Agendada:
+      "bg-blue-100 text-blue-700",
+    Realizada:
+      "bg-green-100 text-green-700",
+    Cancelada:
+      "bg-red-100 text-red-700",
+  }
 
   return (
     <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${estilos[estado] || "bg-gray-100 text-gray-600"
-        }`}
+      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+        classes[estado] ||
+        "bg-gray-100 text-gray-700"
+      }`}
     >
-      {estado || "Sem estado"}
+      {estado}
     </span>
-  );
+  )
 }
 
 function CartaoConsulta({ consulta }) {
   return (
     <Link
       to={`/medico/agenda/${consulta.id}`}
-      className="block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primaria hover:shadow-md"
+      className="block rounded-2xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-6"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
-        <div className="flex min-w-0 gap-4">
-
-          <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-primaria/10 text-primaria">
-            <span className="text-lg font-bold">
-              {consulta.horario || "--"}
-            </span>
-
-            {consulta.horaFim && (
-              <span className="text-[10px] font-medium">
-                até {consulta.horaFim}
-              </span>
-            )}
-          </div>
-
-          <div className="min-w-0">
-            <h3 className="font-bold text-texto">
-              {consulta.pacienteNome || "Paciente"}
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-lg font-bold text-gray-900">
+              {consulta.pacienteNome ||
+                "Paciente"}
             </h3>
 
-            <p className="mt-1 text-sm text-texto-secundario">
+            <EstadoConsulta
+              estado={consulta.estado}
+            />
+          </div>
+
+          <div className="mt-3 space-y-1 text-sm text-gray-600">
+            <p>
+              <strong>Data:</strong>{" "}
               {formatarData(consulta.data)}
             </p>
 
+            <p>
+              <strong>Horário:</strong>{" "}
+              {consulta.horario ||
+                "Não informado"}
+              {consulta.horaFim
+                ? ` - ${consulta.horaFim}`
+                : ""}
+            </p>
+
             {consulta.pacienteEmail && (
-              <p className="mt-1 break-all text-sm text-texto-secundario">
+              <p>
+                <strong>Email:</strong>{" "}
                 {consulta.pacienteEmail}
               </p>
             )}
-          </div>
 
+            {consulta.motivo && (
+              <p>
+                <strong>Motivo:</strong>{" "}
+                {consulta.motivo}
+              </p>
+            )}
+          </div>
         </div>
 
-        <EstadoConsulta estado={consulta.estado} />
+        <span className="text-sm font-semibold text-primaria">
+          Ver detalhes →
+        </span>
 
       </div>
-
-      {consulta.motivo && (
-        <div className="mt-5 rounded-xl bg-gray-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-texto-secundario">
-            Motivo da consulta
-          </p>
-
-          <p className="mt-2 text-sm leading-6 text-texto">
-            {consulta.motivo}
-          </p>
-        </div>
-      )}
-
     </Link>
-  );
+  )
 }
 
-export default function MinhaAgendaMedico() {
-  const medico = obterMedicoAutenticado();
-
-  const consultas = useMemo(() => {
-    if (!medico) return [];
-
-    return obterConsultasDoMedico(medico.id) || [];
-  }, [medico]);
-
-  const hoje = obterDataHoje();
-
-  const consultasAgendadas = consultas
-    .filter((consulta) => consulta.estado === "Agendada")
-    .sort((a, b) => {
-      const dataA = `${a.data || ""} ${a.horario || ""}`;
-      const dataB = `${b.data || ""} ${b.horario || ""}`;
-
-      return dataA.localeCompare(dataB);
-    });
-
-  const consultasHoje = consultasAgendadas.filter(
-    (consulta) => consulta.data === hoje
-  );
-
-  const proximasConsultas = consultasAgendadas.filter(
-    (consulta) => consulta.data > hoje
-  );
+function MinhaAgendaMedico() {
+  const medico = obterMedicoAutenticado()
 
   if (!medico) {
     return (
-      <main className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6">
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <h1 className="text-2xl font-bold text-texto">
-            Perfil médico não associado
+      <main className="min-h-[70vh] bg-gray-50 px-4 py-12">
+        <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Médico não encontrado
           </h1>
-
-          <p className="mt-2 text-texto-secundario">
-            Não foi possível carregar a agenda médica.
-          </p>
-        </section>
+        </div>
       </main>
-    );
+    )
   }
 
+  const consultas =
+    obterConsultasDoMedico(medico.id)
+
+  const hoje = obterDataHoje()
+
+  /*
+   * Consultas de hoje.
+   */
+  const consultasHoje = consultas
+    .filter(
+      (consulta) =>
+        consulta.data === hoje &&
+        consulta.estado !== "Cancelada"
+    )
+    .sort((a, b) =>
+      String(a.horario || "").localeCompare(
+        String(b.horario || "")
+      )
+    )
+
+  /*
+   * Consultas futuras.
+   */
+  const proximasConsultas = consultas
+    .filter(
+      (consulta) =>
+        consulta.data > hoje &&
+        consulta.estado === "Agendada"
+    )
+    .sort((a, b) =>
+      `${a.data} ${a.horario}`.localeCompare(
+        `${b.data} ${b.horario}`
+      )
+    )
+
+  /*
+   * Consultas anteriores:
+   *
+   * - Realizadas
+   * - Canceladas
+   * - Agendadas cuja data já passou
+   *
+   * Assim nenhuma consulta fica "perdida".
+   */
+  const historico = consultas
+    .filter((consulta) => {
+      if (consulta.data < hoje) {
+        return true
+      }
+
+      return (
+        consulta.estado === "Realizada" ||
+        consulta.estado === "Cancelada"
+      )
+    })
+    .sort((a, b) =>
+      `${b.data} ${b.horario}`.localeCompare(
+        `${a.data} ${a.horario}`
+      )
+    )
+
+  const totalAgendadas = consultas.filter(
+    (consulta) =>
+      consulta.estado === "Agendada"
+  ).length
+
+  const totalRealizadas = consultas.filter(
+    (consulta) =>
+      consulta.estado === "Realizada"
+  ).length
+
+  const totalCanceladas = consultas.filter(
+    (consulta) =>
+      consulta.estado === "Cancelada"
+  ).length
+
   return (
-    <main className="min-h-[70vh] bg-gray-50/70">
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-[70vh] bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
 
         {/* Cabeçalho */}
+        <div className="mb-8">
+          <Link
+            to="/medico/dashboard"
+            className="text-sm font-medium text-primaria hover:underline"
+          >
+            ← Voltar ao dashboard
+          </Link>
 
-        <header className="mb-8">
-          <span className="inline-flex rounded-full bg-white border border-primaria px-3 py-1 text-xs font-semibold uppercase tracking-wide text-texto">
-            Agenda médica
-          </span>
-
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-texto">
+          <h1 className="mt-4 text-3xl font-bold text-gray-900">
             Minha agenda
           </h1>
 
-          <p className="mt-2 max-w-2xl text-texto-secundario">
-            Consulte as marcações dos seus pacientes e acompanhe
-            a sua agenda.
+          <p className="mt-2 text-gray-600">
+            Consulte e acompanhe as suas consultas.
           </p>
-        </header>
+        </div>
 
-        {/* Resumo */}
+        {/* Estatísticas */}
+        <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
-        <section className="mb-8 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-texto-secundario">
-              Consultas de hoje
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">
+              Hoje
             </p>
 
-            <p className="mt-2 text-3xl font-bold text-texto">
+            <p className="mt-2 text-3xl font-bold text-gray-900">
               {consultasHoje.length}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-texto-secundario">
-              Próximas consultas
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">
+              Agendadas
             </p>
 
-            <p className="mt-2 text-3xl font-bold text-texto">
-              {proximasConsultas.length}
+            <p className="mt-2 text-3xl font-bold text-blue-600">
+              {totalAgendadas}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-texto-secundario">
-              Total agendado
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">
+              Realizadas
             </p>
 
-            <p className="mt-2 text-3xl font-bold text-texto">
-              {consultasAgendadas.length}
+            <p className="mt-2 text-3xl font-bold text-green-600">
+              {totalRealizadas}
             </p>
           </div>
+
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">
+              Canceladas
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-red-600">
+              {totalCanceladas}
+            </p>
+          </div>
+
         </section>
 
-        {/* Consultas de hoje */}
+        {/* Hoje */}
+        <section className="mb-10">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Consultas de hoje
+            </h2>
 
-        <section aria-labelledby="consultas-hoje">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2
-                id="consultas-hoje"
-                className="text-xl font-bold text-texto"
-              >
-                Hoje
-              </h2>
-
-              <p className="mt-1 text-sm text-texto-secundario">
-                Consultas marcadas para hoje.
-              </p>
-            </div>
-
-            <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-              {consultasHoje.length}
-            </span>
+            <p className="mt-1 text-sm text-gray-600">
+              Atendimentos previstos para hoje.
+            </p>
           </div>
 
           {consultasHoje.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
-              <p className="font-semibold text-texto">
-                Não existem consultas marcadas para hoje.
-              </p>
-
-              <p className="mt-2 text-sm text-texto-secundario">
-                A sua agenda de hoje está livre.
+            <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+              <p className="text-gray-500">
+                Não existem consultas para hoje.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {consultasHoje.map((consulta) => (
-                <CartaoConsulta
-                  key={consulta.id}
-                  consulta={consulta}
-                />
-              ))}
+              {consultasHoje.map(
+                (consulta) => (
+                  <CartaoConsulta
+                    key={consulta.id}
+                    consulta={consulta}
+                  />
+                )
+              )}
             </div>
           )}
         </section>
 
-        {/* Próximas consultas */}
+        {/* Próximas */}
+        <section className="mb-10">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Próximas consultas
+            </h2>
 
-        <section
-          aria-labelledby="proximas-consultas"
-          className="mt-10"
-        >
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2
-                id="proximas-consultas"
-                className="text-xl font-bold text-texto"
-              >
-                Próximas consultas
-              </h2>
-
-              <p className="mt-1 text-sm text-texto-secundario">
-                Consultas agendadas para os próximos dias.
-              </p>
-            </div>
-
-            <span className="rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-700">
-              {proximasConsultas.length}
-            </span>
+            <p className="mt-1 text-sm text-gray-600">
+              Consultas agendadas para os próximos dias.
+            </p>
           </div>
 
           {proximasConsultas.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
-              <p className="font-semibold text-texto">
+            <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+              <p className="text-gray-500">
                 Não existem próximas consultas.
-              </p>
-
-              <p className="mt-2 text-sm text-texto-secundario">
-                Novas marcações aparecerão automaticamente nesta área.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {proximasConsultas.map((consulta) => (
-                <CartaoConsulta
-                  key={consulta.id}
-                  consulta={consulta}
-                />
-              ))}
+              {proximasConsultas.map(
+                (consulta) => (
+                  <CartaoConsulta
+                    key={consulta.id}
+                    consulta={consulta}
+                  />
+                )
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Histórico */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Histórico
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-600">
+              Consultas anteriores e atendimentos já encerrados.
+            </p>
+          </div>
+
+          {historico.length === 0 ? (
+            <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+              <p className="text-gray-500">
+                Ainda não existem consultas no histórico.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {historico.map(
+                (consulta) => (
+                  <CartaoConsulta
+                    key={consulta.id}
+                    consulta={consulta}
+                  />
+                )
+              )}
             </div>
           )}
         </section>
 
       </div>
     </main>
-  );
+  )
 }
+
+export default MinhaAgendaMedico

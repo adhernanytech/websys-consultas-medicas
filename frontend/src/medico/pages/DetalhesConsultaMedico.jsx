@@ -240,6 +240,14 @@ export default function DetalhesConsultaMedico() {
               </p>
             </div>
 
+            {consulta.estado === "Realizada" && (
+              <Link
+                to={`/medico/agenda/${consulta.id}/registo-clinico`}
+                className="rounded-lg bg-primaria px-5 py-2.5 font-semibold text-white hover:opacity-90"
+              >
+                Registo clínico
+              </Link>
+            )}
             {consulta.pacienteId && (
               <Link
                 to={`/medico/pacientes/${consulta.pacienteId}`}

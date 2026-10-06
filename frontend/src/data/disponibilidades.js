@@ -1,14 +1,20 @@
 
-import { obterConsultas } from "./consultas";
-
 const CHAVE_DISPONIBILIDADES = "disponibilidades";
 
-function dataLocalISO(data) {
+function dataLocalISO(data = new Date()) {
   const ano = data.getFullYear();
   const mes = String(data.getMonth() + 1).padStart(2, "0");
   const dia = String(data.getDate()).padStart(2, "0");
 
   return `${ano}-${mes}-${dia}`;
+}
+
+function horaValida(hora) {
+  if (typeof hora !== "string") return false;
+
+  const correspondencia = hora.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+
+  return Boolean(correspondencia);
 }
 
 export function obterDisponibilidades() {
@@ -23,9 +29,11 @@ export function obterDisponibilidades() {
   }
 }
 
-export function guardarDisponibilidades(
-  disponibilidades
-) {
+export function guardarDisponibilidades(disponibilidades) {
+  if (!Array.isArray(disponibilidades)) {
+    throw new Error("A lista de disponibilidades é inválida.");
+  }
+
   localStorage.setItem(
     CHAVE_DISPONIBILIDADES,
     JSON.stringify(disponibilidades)
@@ -38,10 +46,8 @@ export function obterDisponibilidadePorId(id) {
   ) || null;
 }
 
-export function obterDisponibilidadesDoMedico(
-  medicoId
-) {
-  const hoje = dataLocalISO(new Date());
+export function obterDisponibilidadesDoMedico(medicoId) {
+  const hoje = dataLocalISO();
 
   return obterDisponibilidades()
     .filter(
@@ -76,15 +82,38 @@ export function adicionarDisponibilidade(dados) {
     data,
     horaInicio,
     horaFim,
-  } = dados;
+  } = dados || {};
 
-  if (!medicoId || !data || !horaInicio || !horaFim) {
+  if (
+    medicoId === undefined ||
+    medicoId === null ||
+    !data ||
+    !horaInicio ||
+    !horaFim
+  ) {
     throw new Error(
-      "Preencha a data, a hora de início e a hora de fim."
+      "Preencha o médico, a data, a hora de início e a hora de fim."
     );
   }
 
-  if (data < dataLocalISO(new Date())) {
+  if (!horaValida(horaInicio) || !horaValida(horaFim)) {
+    throw new Error("Indique horas válidas no formato HH:MM.");
+  }
+
+  const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(data);
+  const dataObjecto = dataValida
+    ? new Date(`${data}T12:00:00`)
+    : null;
+
+  if (
+    !dataObjecto ||
+    Number.isNaN(dataObjecto.getTime()) ||
+    dataLocalISO(dataObjecto) !== data
+  ) {
+    throw new Error("Indique uma data válida.");
+  }
+
+  if (data < dataLocalISO()) {
     throw new Error(
       "A data não pode ser anterior ao dia de hoje."
     );
@@ -106,6 +135,7 @@ export function adicionarDisponibilidade(dados) {
       return false;
     }
 
+    // Horários que se sobrepõem não podem coexistir.
     return (
       horaInicio < item.horaFim &&
       horaFim > item.horaInicio
@@ -122,7 +152,7 @@ export function adicionarDisponibilidade(dados) {
     id: `disp-${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 8)}`,
-    medicoId: Number(medicoId),
+    medicoId,
     data,
     horaInicio,
     horaFim,
@@ -137,7 +167,15 @@ export function adicionarDisponibilidade(dados) {
   return novaDisponibilidade;
 }
 
-export function removerDisponibilidade(id, medicoId) {
+/**
+ * Recebe a lista de consultas como argumento para evitar
+ * a dependência circular com consultas.js.
+ */
+export function removerDisponibilidade(
+  id,
+  medicoId,
+  consultas = []
+) {
   const disponibilidades = obterDisponibilidades();
 
   const disponibilidade = disponibilidades.find(
@@ -151,8 +189,6 @@ export function removerDisponibilidade(id, medicoId) {
       "Disponibilidade não encontrada para este médico."
     );
   }
-
-  const consultas = obterConsultas();
 
   const temConsultaActiva = consultas.some(
     (consulta) =>
