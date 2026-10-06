@@ -62,6 +62,10 @@ function NavbarMedico() {
       to: "/medico/disponibilidades",
       texto: "Disponibilidades",
     },
+    {
+    to: "/medico/perfil",
+    texto: "Meu perfil",
+  },
   ];
 
   return (
@@ -100,7 +104,7 @@ function NavbarMedico() {
 
               <div className="max-w-36">
                 <p className="truncate text-sm font-semibold">
-                  {medico.nome}
+                  Dr./a {medico.nome}
                 </p>
                 <p className="text-xs text-white/75">
                   Profissional de saúde

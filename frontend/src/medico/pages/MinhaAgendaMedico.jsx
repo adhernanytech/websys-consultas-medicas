@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 
 import { obterMedicoAutenticado } from "../../data/medicos";
 import { obterConsultasDoMedico } from "../../data/consultas";
@@ -32,9 +33,8 @@ function EstadoConsulta({ estado }) {
 
   return (
     <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-        estilos[estado] || "bg-gray-100 text-gray-600"
-      }`}
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${estilos[estado] || "bg-gray-100 text-gray-600"
+        }`}
     >
       {estado || "Sem estado"}
     </span>
@@ -43,7 +43,10 @@ function EstadoConsulta({ estado }) {
 
 function CartaoConsulta({ consulta }) {
   return (
-    <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+    <Link
+      to={`/medico/agenda/${consulta.id}`}
+      className="block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primaria hover:shadow-md"
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 
         <div className="flex min-w-0 gap-4">
@@ -94,7 +97,7 @@ function CartaoConsulta({ consulta }) {
         </div>
       )}
 
-    </article>
+    </Link>
   );
 }
 
