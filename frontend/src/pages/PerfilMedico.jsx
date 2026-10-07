@@ -1,6 +1,5 @@
-import { useParams, useNavigate } from "react-router-dom"
-
-import medicos from "../data/medicos"
+import { useParams, useNavigate, useLocation } from "react-router-dom"
+import { obterMedicoPorId } from "../data/medicos"
 
 
 function PerfilMedico() {
@@ -8,14 +7,16 @@ function PerfilMedico() {
   const { id } = useParams()
 
   const navegar = useNavigate()
+  const location = useLocation()
 
-  
-  const medicoId = Number(id)
-
-  const medico = medicos.find((item) => item.id === medicoId)
+  const medico = obterMedicoPorId(id)
 
   function marcarConsulta() {
-    navegar(`/marcar-consulta/${medico.id}`)
+    navegar(
+      location.pathname.startsWith("/paciente")
+        ? `/paciente/marcar-consulta/${medico.id}`
+        : `/marcar-consulta/${medico.id}`
+    )
   }
 
   if (!medico) {

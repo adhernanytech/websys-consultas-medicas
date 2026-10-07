@@ -47,14 +47,30 @@ export function obterDisponibilidadePorId(id) {
 }
 
 export function obterDisponibilidadesDoMedico(medicoId) {
-  const hoje = dataLocalISO();
+  const agora = new Date();
 
   return obterDisponibilidades()
     .filter(
-      (item) =>
-        String(item.medicoId) === String(medicoId) &&
-        item.data >= hoje &&
-        item.estado === "Disponível"
+      (item) => {
+        if (
+          String(item.medicoId) !== String(medicoId) ||
+          item.estado !== "Disponível" ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(item.data || "") ||
+          !horaValida(item.horaInicio) ||
+          !horaValida(item.horaFim) ||
+          item.horaInicio >= item.horaFim
+        ) {
+          return false;
+        }
+
+        const data = new Date(`${item.data}T${item.horaInicio}:00`);
+
+        return (
+          !Number.isNaN(data.getTime()) &&
+          dataLocalISO(data) === item.data &&
+          data.getTime() > agora.getTime()
+        );
+      }
     )
     .sort((a, b) =>
       `${a.data}T${a.horaInicio}`.localeCompare(

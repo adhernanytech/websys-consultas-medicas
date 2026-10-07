@@ -259,7 +259,8 @@ export default function DetalhesConsultaMedico() {
 
           </div>
 
-          {consulta.estado === "Agendada" && (
+          {(consulta.estado === "Agendada" ||
+            consulta.estado === "Confirmada") && (
             <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 p-6 sm:flex-row sm:justify-end">
 
               <button
@@ -287,4 +288,3 @@ export default function DetalhesConsultaMedico() {
     </main>
   );
 }
-
