@@ -27,11 +27,19 @@ import MinhasConsultas from "../paciente/pages/MinhasConsultasPaciente"
 import DashboardPaciente from "../paciente/pages/DashboardPaciente"
 import PerfilPaciente from "../paciente/pages/PerfilPaciente"
 import DetalhesConsulta from "../paciente/pages/DetalhesConsulta"
+import HistoricoClinicoPaciente from "../paciente/pages/HistoricoClinicoPaciente"
 
 /* Páginas do médico */
 import DashboardMedico from "../medico/pages/DashboardMedico"
 import GerirDisponibilidade from "../medico/pages/GerirDisponibilidade"
 import PerfilMedicoPendente from "../medico/pages/PerfilMedicoPendente"
+<<<<<<< Updated upstream
+=======
+import MinhaAgendaMedico from "../medico/pages/MinhaAgendaMedico"
+import DetalhesConsultaMedico from "../medico/pages/DetalhesConsultaMedico"
+import RegistroClinicoConsulta from "../medico/pages/RegistroClinicoConsulta"
+import PerfilPacienteMedico from "../medico/pages/PerfilPacienteMedico"
+>>>>>>> Stashed changes
 
 /* Páginas do admin */
 import DashboardAdmin from "../administrador/pages/DashboardAdmin"
@@ -142,6 +150,11 @@ function AppRotas() {
               element={<PerfilPaciente />}
             />
 
+            <Route
+              path="/paciente/historico-clinico"
+              element={<HistoricoClinicoPaciente />}
+            />
+
           </Route>
 
         </Route>
@@ -161,10 +174,46 @@ function AppRotas() {
           
           {/* Conta médica ainda sem perfil associado */}
 
+<<<<<<< Updated upstream
           <Route
             path="/medico/perfil-pendente"
             element={<PerfilMedicoPendente />}
           />
+=======
+            <Route
+              path="/medico/agenda"
+              element={<MinhaAgendaMedico />}
+            />
+
+            <Route
+              path="/medico/agenda/:id"
+              element={<DetalhesConsultaMedico />}
+            />
+
+            <Route
+              path="/medico/agenda/:id/registo-clinico"
+              element={<RegistroClinicoConsulta />}
+            />
+
+            <Route
+              path="/medico/pacientes/:pacienteId"
+              element={<PerfilPacienteMedico />}
+            />
+
+            <Route
+              path="/medico/disponibilidades"
+              element={<GerirDisponibilidade />}
+            />
+
+            {/* Conta médica ainda sem perfil associado */}
+
+            <Route
+              path="/medico/perfil-pendente"
+              element={<PerfilMedicoPendente />}
+            />
+
+          </Route>
+>>>>>>> Stashed changes
         </Route>
 
 
