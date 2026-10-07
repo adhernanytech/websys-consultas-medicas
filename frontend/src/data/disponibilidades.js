@@ -135,6 +135,15 @@ export function adicionarDisponibilidade(dados) {
     );
   }
 
+  if (
+    data === dataLocalISO() &&
+    new Date(`${data}T${horaInicio}:00`).getTime() <= Date.now()
+  ) {
+    throw new Error(
+      "A hora de início tem de ser futura quando selecciona o dia de hoje."
+    );
+  }
+
   if (horaInicio >= horaFim) {
     throw new Error(
       "A hora de fim deve ser posterior à hora de início."
@@ -181,6 +190,109 @@ export function adicionarDisponibilidade(dados) {
   ]);
 
   return novaDisponibilidade;
+}
+
+export function actualizarDisponibilidade(
+  id,
+  medicoId,
+  dados,
+  consultas = []
+) {
+  const disponibilidades = obterDisponibilidades();
+  const indice = disponibilidades.findIndex(
+    (item) =>
+      String(item.id) === String(id) &&
+      String(item.medicoId) === String(medicoId)
+  );
+
+  if (indice === -1) {
+    throw new Error(
+      "Disponibilidade não encontrada para este médico."
+    );
+  }
+
+  const disponibilidadeActual = disponibilidades[indice];
+  if (
+    disponibilidadeActual.estado !== "Disponível" ||
+    consultas.some(
+      (consulta) =>
+        String(consulta.disponibilidadeId) === String(id) &&
+        consulta.estado !== "Cancelada"
+    )
+  ) {
+    throw new Error(
+      "Só é possível editar um horário disponível sem consulta associada."
+    );
+  }
+
+  const { data, horaInicio, horaFim } = dados || {};
+
+  if (!data || !horaInicio || !horaFim) {
+    throw new Error(
+      "Preencha a data, a hora de início e a hora de fim."
+    );
+  }
+
+  const dataObjecto = /^\d{4}-\d{2}-\d{2}$/.test(data)
+    ? new Date(`${data}T12:00:00`)
+    : null;
+
+  if (
+    !dataObjecto ||
+    Number.isNaN(dataObjecto.getTime()) ||
+    dataLocalISO(dataObjecto) !== data
+  ) {
+    throw new Error("Indique uma data válida.");
+  }
+
+  if (data < dataLocalISO()) {
+    throw new Error("A data não pode ser anterior ao dia de hoje.");
+  }
+
+  if (!horaValida(horaInicio) || !horaValida(horaFim)) {
+    throw new Error("Indique horas válidas no formato HH:MM.");
+  }
+
+  if (horaInicio >= horaFim) {
+    throw new Error(
+      "A hora de fim deve ser posterior à hora de início."
+    );
+  }
+
+  if (
+    data === dataLocalISO() &&
+    new Date(`${data}T${horaInicio}:00`).getTime() <= Date.now()
+  ) {
+    throw new Error(
+      "A hora de início tem de ser futura quando selecciona o dia de hoje."
+    );
+  }
+
+  const conflito = disponibilidades.some(
+    (item) =>
+      String(item.medicoId) === String(medicoId) &&
+      String(item.id) !== String(id) &&
+      item.data === data &&
+      horaInicio < item.horaFim &&
+      horaFim > item.horaInicio
+  );
+
+  if (conflito) {
+    throw new Error(
+      "Este horário sobrepõe-se a uma disponibilidade já registada."
+    );
+  }
+
+  disponibilidades[indice] = {
+    ...disponibilidadeActual,
+    data,
+    horaInicio,
+    horaFim,
+  };
+
+  guardarDisponibilidades(disponibilidades);
+
+  return disponibilidades[indice];
 }
 
 /**

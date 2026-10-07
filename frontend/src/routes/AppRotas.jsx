@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 
 /* Layouts */
 import LayoutPublico from "../layouts/LayoutPublico"
-import LayoutPaciente from "../paciente/layouts/LayoutPaciente"
+import LayoutPaciente from "../paciente/layouts/PacienteLayout"
 import LayoutMedico from "../medico/layout/LayoutMedico";
 
 /* ROLAGEM */
@@ -34,6 +34,11 @@ import DashboardMedico from "../medico/pages/DashboardMedico"
 import GerirDisponibilidade from "../medico/pages/GerirDisponibilidade"
 import PerfilMedicoPendente from "../medico/pages/PerfilMedicoPendente"
 import MinhaAgendaMedico from "../medico/pages/MinhaAgendaMedico"
+import MyPerfilMedico from "../medico/pages/MyPerfilMedico"
+import DetalhesConsultaMedico from "../medico/pages/DetalhesConsultaMedico"
+import PerfilMedicoPaciente from "../medico/pages/PerfilPacienteMedico"
+import RegistroClinicoConsulta from "../medico/pages/RegistroClinicoConsulta"
+import PacientesMedico from "../medico/pages/PacientesMedico"
 
 /* Páginas do admin */
 import DashboardAdmin from "../administrador/pages/DashboardAdmin"
@@ -162,10 +167,31 @@ function AppRotas() {
               path="/medico/agenda"
               element={<MinhaAgendaMedico />}
             />
+            <Route
+              path="/medico/agenda/:id"
+              element={<DetalhesConsultaMedico />}
+            />
+            <Route
+              path="/medico/agenda/:id/registo-clinico"
+              element={<RegistroClinicoConsulta />}
+            />
+            <Route
+              path="/medico/pacientes"
+              element={<PacientesMedico />}
+            />
+            <Route
+              path="/medico/pacientes/:pacienteId"
+              element={<PerfilMedicoPaciente />}
+            />
 
             <Route
               path="/medico/disponibilidades"
               element={<GerirDisponibilidade />}
+            />
+
+            <Route
+              path="/medico/meu-perfil"
+              element={<MyPerfilMedico />}
             />
 
             {/* Conta médica ainda sem perfil associado */}

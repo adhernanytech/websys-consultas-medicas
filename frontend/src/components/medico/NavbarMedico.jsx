@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import estiloLink from "../EstiloLink";
@@ -12,18 +12,7 @@ function NavbarMedico() {
   const navegar = useNavigate();
 
   const [menuAberto, setMenuAberto] = useState(false);
-  const [medico, setMedico] = useState(null);
-
-  useEffect(() => {
-    const usuario = obterUsuarioAutenticado();
-
-    if (!usuario || usuario.tipo !== "medico") {
-      navegar("/login", { replace: true });
-      return;
-    }
-
-    setMedico(usuario);
-  }, [navegar]);
+  const medico = obterUsuarioAutenticado();
 
   function fecharMenu() {
     setMenuAberto(false);
@@ -43,7 +32,7 @@ function NavbarMedico() {
     navegar("/login", { replace: true });
   }
 
-  if (!medico) return null;
+  if (!medico || medico.tipo !== "medico") return null;
 
   const inicialNome =
     medico.nome?.trim()?.charAt(0)?.toUpperCase() || "M";
@@ -63,9 +52,13 @@ function NavbarMedico() {
       texto: "Disponibilidades",
     },
     {
-    to: "/medico/perfil",
-    texto: "Meu perfil",
-  },
+      to: "/medico/pacientes",
+      texto: "Pacientes",
+    },
+    {
+      to: "/medico/meu-perfil",
+      texto: "Meu perfil",
+    },
   ];
 
   return (

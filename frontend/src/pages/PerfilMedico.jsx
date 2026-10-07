@@ -1,5 +1,9 @@
-import { useParams, useNavigate, useLocation } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { obterMedicoPorId } from "../data/medicos"
+import {
+  obterUsuarioAutenticado,
+  usuarioIsPaciente,
+} from "../data/usuarios"
 
 
 function PerfilMedico() {
@@ -7,16 +11,21 @@ function PerfilMedico() {
   const { id } = useParams()
 
   const navegar = useNavigate()
-  const location = useLocation()
+  const usuario = obterUsuarioAutenticado()
 
   const medico = obterMedicoPorId(id)
 
   function marcarConsulta() {
-    navegar(
-      location.pathname.startsWith("/paciente")
-        ? `/paciente/marcar-consulta/${medico.id}`
-        : `/marcar-consulta/${medico.id}`
-    )
+    const destino = `/paciente/marcar-consulta/${medico.id}`
+
+    if (usuarioIsPaciente(usuario)) {
+      navegar(destino)
+      return
+    }
+
+    navegar("/login", {
+      state: { from: { pathname: destino } },
+    })
   }
 
   if (!medico) {
@@ -40,6 +49,13 @@ function PerfilMedico() {
       <div className="max-w-4xl mx-auto">
 
         <div className="bg-fundo rounded-xl shadow-md p-8">
+          {medico.foto && (
+            <img
+              src={medico.foto}
+              alt={`Fotografia de ${medico.nome}`}
+              className="mb-5 h-28 w-28 rounded-full object-cover"
+            />
+          )}
           <p className="text-texto-secundario mt-2">
             Código do médico: {medico.id}
           </p>
@@ -62,8 +78,8 @@ function PerfilMedico() {
             </h2>
 
             <p className="text-texto-secundario mt-2">
-              Este espaço apresentará informações detalhadas
-              sobre o médico/a, a sua experiência e os seus serviços.
+              {medico.biografia ||
+                "Este médico ainda não adicionou uma biografia profissional."}
             </p>
           </div>
 
@@ -77,12 +93,6 @@ function PerfilMedico() {
             </p>
 
           </section>
-
-          <button
-            className="mt-4 mr-4 border border-gray-300 text-gray-700 px-5 py-3 rounded-lg hover:bg-gray-100 cursor-pointer"
-          >
-            Voltar
-          </button>
 
           <button 
             onClick={marcarConsulta}

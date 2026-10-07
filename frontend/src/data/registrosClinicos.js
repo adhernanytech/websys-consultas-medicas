@@ -22,24 +22,74 @@ export function guardarRegistosClinicos(registos) {
   )
 }
 
-export function obterRegistoClinicoPorConsulta(consultaId) {
-  const registos = obterRegistosClinicos()
+export function obterRegistoClinicoPorConsulta(
+  consultaId,
+  medicoId
+) {
+  if (consultaId == null || medicoId == null) return null
+
+  const consulta = obterConsultasDoMedico(medicoId).find(
+    (item) => String(item.id) === String(consultaId)
+  )
+
+  if (
+    !consulta ||
+    (consulta.estado !== "Realizada" &&
+      consulta.estado !== "Concluída")
+  ) {
+    return null
+  }
 
   return (
-    registos.find(
+    obterRegistosClinicos().find(
       (registo) =>
-        String(registo.consultaId) === String(consultaId)
+        String(registo.consultaId) === String(consultaId) &&
+        String(registo.medicoId) === String(medicoId) &&
+        String(registo.pacienteId) === String(consulta.pacienteId)
     ) || null
   )
 }
 
-export function obterRegistosClinicosDoPaciente(pacienteId) {
+export function obterRegistosClinicosDoMedicoEPaciente(
+  medicoId,
+  pacienteId
+) {
+  if (medicoId == null || pacienteId == null) return []
+
+  const consultasValidas = obterConsultasDoMedico(medicoId)
+    .filter(
+      (consulta) =>
+        String(consulta.pacienteId) === String(pacienteId) &&
+        (consulta.estado === "Realizada" ||
+          consulta.estado === "Concluída")
+    )
+  const idsConsultas = new Set(
+    consultasValidas.map((consulta) => String(consulta.id))
+  )
+  const consultaPorId = new Map(
+    consultasValidas.map((consulta) => [
+      String(consulta.id),
+      consulta,
+    ])
+  )
+
   const registos = obterRegistosClinicos()
 
-  return registos.filter(
-    (registo) =>
-      String(registo.pacienteId) === String(pacienteId)
-  )
+  return registos
+    .filter(
+      (registo) =>
+        String(registo.medicoId) === String(medicoId) &&
+        String(registo.pacienteId) === String(pacienteId) &&
+        idsConsultas.has(String(registo.consultaId))
+    )
+    .sort((a, b) => {
+      const consultaA = consultaPorId.get(String(a.consultaId))
+      const consultaB = consultaPorId.get(String(b.consultaId))
+      const dataA = `${consultaA?.data || ""} ${consultaA?.horario || ""}`
+      const dataB = `${consultaB?.data || ""} ${consultaB?.horario || ""}`
+
+      return dataB.localeCompare(dataA)
+    })
 }
 
 export function guardarRegistoClinico({
@@ -79,6 +129,18 @@ export function guardarRegistoClinico({
     (registo) =>
       String(registo.consultaId) === String(consultaId)
   )
+
+  if (
+    indice !== -1 &&
+    (
+      String(registos[indice].medicoId) !== String(medicoId) ||
+      String(registos[indice].pacienteId) !== String(pacienteId)
+    )
+  ) {
+    throw new Error(
+      "O registo clínico existente não pertence a esta consulta, médico e paciente."
+    )
+  }
 
   const registo = {
     id:

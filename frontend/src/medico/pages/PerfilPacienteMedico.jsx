@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom"
 import { obterUsuarioAutenticado, obterUsuarios } from "../../data/usuarios"
 import { obterMedicoDaConta } from "../../data/medicos"
 import { obterConsultasDoMedico } from "../../data/consultas"
+import { obterRegistosClinicosDoMedicoEPaciente } from "../../data/registrosClinicos"
 
 function formatarData(data) {
   if (!data) return "Data não disponível"
@@ -24,7 +25,11 @@ function obterClasseEstado(estado) {
       return "bg-blue-100 text-blue-700"
 
     case "Realizada":
+    case "Concluída":
       return "bg-green-100 text-green-700"
+
+    case "Confirmada":
+      return "bg-indigo-100 text-indigo-700"
 
     case "Cancelada":
       return "bg-red-100 text-red-700"
@@ -70,6 +75,10 @@ function PerfilPacienteMedico() {
   const consultasDoPaciente = consultasDoMedico.filter(
     (consulta) =>
       String(consulta.pacienteId) === String(pacienteId)
+  )
+  const registosClinicos = obterRegistosClinicosDoMedicoEPaciente(
+    medico.id,
+    pacienteId
   )
 
   /*
@@ -161,7 +170,9 @@ function PerfilPacienteMedico() {
   const totalConsultas = historico.length
 
   const consultasRealizadas = historico.filter(
-    (consulta) => consulta.estado === "Realizada"
+    (consulta) =>
+      consulta.estado === "Realizada" ||
+      consulta.estado === "Concluída"
   ).length
 
   const consultasAgendadas = historico.filter(
@@ -300,6 +311,80 @@ function PerfilPacienteMedico() {
             </p>
           </div>
 
+        </section>
+
+        <section className="mt-8">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Histórico clínico
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Registos de consultas realizadas consigo, do mais recente para o mais antigo.
+            </p>
+          </div>
+
+          {registosClinicos.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-600">
+              Ainda não existem registos clínicos para este paciente.
+            </div>
+          ) : (
+            <ol className="space-y-4">
+              {registosClinicos.map((registo) => {
+                const consulta = historico.find(
+                  (item) =>
+                    String(item.id) === String(registo.consultaId)
+                )
+
+                return (
+                  <li
+                    key={registo.id}
+                    className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">
+                          Consulta de {formatarData(consulta?.data)}
+                          {consulta?.horario
+                            ? ` · ${consulta.horario}`
+                            : ""}
+                        </h3>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Actualizado:{" "}
+                          {registo.atualizadoEm
+                            ? new Date(registo.atualizadoEm).toLocaleString("pt-PT")
+                            : "Data não disponível"}
+                        </p>
+                      </div>
+                      <Link
+                        to={`/medico/agenda/${registo.consultaId}/registo-clinico`}
+                        className="text-sm font-semibold text-primaria hover:underline"
+                      >
+                        Consultar / editar registo
+                      </Link>
+                    </div>
+
+                    <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+                      {[
+                        ["Queixa / motivo clínico", registo.queixa],
+                        ["Observações clínicas", registo.observacoes],
+                        ["Diagnóstico", registo.diagnostico],
+                        ["Tratamento / prescrição", registo.tratamento],
+                      ].map(([titulo, conteudo]) => (
+                        <div key={titulo}>
+                          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            {titulo}
+                          </dt>
+                          <dd className="mt-1 whitespace-pre-line text-sm leading-6 text-gray-800">
+                            {conteudo || "Não registado"}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
         </section>
 
         {/* Histórico */}

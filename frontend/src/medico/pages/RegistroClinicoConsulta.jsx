@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 
 import { obterUsuarioAutenticado } from "../../data/usuarios"
@@ -24,6 +24,20 @@ function formatarData(data) {
   return `${dia}/${mes}/${ano}`
 }
 
+function obterFormularioRegisto(consultaId, consulta) {
+  const registo = consulta
+    ? obterRegistoClinicoPorConsulta(consulta.id, consulta.medicoId)
+    : null
+
+  return {
+    consultaId,
+    queixa: registo?.queixa || "",
+    observacoes: registo?.observacoes || "",
+    diagnostico: registo?.diagnostico || "",
+    tratamento: registo?.tratamento || "",
+  }
+}
+
 function RegistroClinicoConsulta() {
   const { id } = useParams()
 
@@ -33,41 +47,25 @@ function RegistroClinicoConsulta() {
     ? obterMedicoDaConta(usuario.id)
     : null
 
-  const [consulta, setConsulta] = useState(null)
+  const consulta = medico
+    ? obterConsultasDoMedico(medico.id).find(
+        (item) => String(item.id) === String(id)
+      ) || null
+    : null
+  const [formulario, setFormulario] = useState(() =>
+    obterFormularioRegisto(id, consulta)
+  )
 
-  const [queixa, setQueixa] = useState("")
-  const [observacoes, setObservacoes] = useState("")
-  const [diagnostico, setDiagnostico] = useState("")
-  const [tratamento, setTratamento] = useState("")
+  if (formulario.consultaId !== id) {
+    setFormulario(obterFormularioRegisto(id, consulta))
+  }
 
   const [mensagem, setMensagem] = useState("")
   const [erro, setErro] = useState("")
   const [aGuardar, setAGuardar] = useState(false)
-
-  useEffect(() => {
-    if (!medico) return
-
-    const consultas = obterConsultasDoMedico(medico.id)
-
-    const consultaEncontrada = consultas.find(
-      (item) => String(item.id) === String(id)
-    )
-
-    setConsulta(consultaEncontrada || null)
-
-    if (consultaEncontrada) {
-      const registo = obterRegistoClinicoPorConsulta(
-        consultaEncontrada.id
-      )
-
-      if (registo) {
-        setQueixa(registo.queixa || "")
-        setObservacoes(registo.observacoes || "")
-        setDiagnostico(registo.diagnostico || "")
-        setTratamento(registo.tratamento || "")
-      }
-    }
-  }, [id, medico])
+  const consultaRealizada =
+    consulta?.estado === "Realizada" ||
+    consulta?.estado === "Concluída"
 
   function guardar() {
     setMensagem("")
@@ -78,7 +76,7 @@ function RegistroClinicoConsulta() {
       return
     }
 
-    if (consulta.estado !== "Realizada") {
+    if (!consultaRealizada) {
       setErro(
         "O registo clínico só pode ser preenchido depois de a consulta ser marcada como realizada."
       )
@@ -92,10 +90,10 @@ function RegistroClinicoConsulta() {
         consultaId: consulta.id,
         pacienteId: consulta.pacienteId,
         medicoId: medico.id,
-        queixa,
-        observacoes,
-        diagnostico,
-        tratamento,
+        queixa: formulario.queixa,
+        observacoes: formulario.observacoes,
+        diagnostico: formulario.diagnostico,
+        tratamento: formulario.tratamento,
       })
 
       setMensagem(
@@ -192,7 +190,7 @@ function RegistroClinicoConsulta() {
           </div>
         </section>
 
-        {consulta.estado !== "Realizada" && (
+        {!consultaRealizada && (
           <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
             Esta consulta ainda não está marcada como realizada.
             O registo clínico poderá ser preenchido depois do
@@ -215,11 +213,14 @@ function RegistroClinicoConsulta() {
 
               <textarea
                 id="queixa"
-                value={queixa}
+                value={formulario.queixa}
                 onChange={(event) =>
-                  setQueixa(event.target.value)
+                  setFormulario((actual) => ({
+                    ...actual,
+                    queixa: event.target.value,
+                  }))
                 }
-                disabled={consulta.estado !== "Realizada"}
+                disabled={!consultaRealizada}
                 rows={4}
                 placeholder="Registe a queixa ou motivo clínico apresentado pelo paciente..."
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-primaria focus:ring-2 focus:ring-primaria/20 disabled:bg-gray-100"
@@ -236,11 +237,14 @@ function RegistroClinicoConsulta() {
 
               <textarea
                 id="observacoes"
-                value={observacoes}
+                value={formulario.observacoes}
                 onChange={(event) =>
-                  setObservacoes(event.target.value)
+                  setFormulario((actual) => ({
+                    ...actual,
+                    observacoes: event.target.value,
+                  }))
                 }
-                disabled={consulta.estado !== "Realizada"}
+                disabled={!consultaRealizada}
                 rows={6}
                 placeholder="Registe as observações relevantes do atendimento..."
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-primaria focus:ring-2 focus:ring-primaria/20 disabled:bg-gray-100"
@@ -257,11 +261,14 @@ function RegistroClinicoConsulta() {
 
               <textarea
                 id="diagnostico"
-                value={diagnostico}
+                value={formulario.diagnostico}
                 onChange={(event) =>
-                  setDiagnostico(event.target.value)
+                  setFormulario((actual) => ({
+                    ...actual,
+                    diagnostico: event.target.value,
+                  }))
                 }
-                disabled={consulta.estado !== "Realizada"}
+                disabled={!consultaRealizada}
                 rows={5}
                 placeholder="Registe o diagnóstico..."
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-primaria focus:ring-2 focus:ring-primaria/20 disabled:bg-gray-100"
@@ -278,11 +285,14 @@ function RegistroClinicoConsulta() {
 
               <textarea
                 id="tratamento"
-                value={tratamento}
+                value={formulario.tratamento}
                 onChange={(event) =>
-                  setTratamento(event.target.value)
+                  setFormulario((actual) => ({
+                    ...actual,
+                    tratamento: event.target.value,
+                  }))
                 }
-                disabled={consulta.estado !== "Realizada"}
+                disabled={!consultaRealizada}
                 rows={6}
                 placeholder="Registe o tratamento ou prescrição..."
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-primaria focus:ring-2 focus:ring-primaria/20 disabled:bg-gray-100"
@@ -309,7 +319,7 @@ function RegistroClinicoConsulta() {
               type="button"
               onClick={guardar}
               disabled={
-                consulta.estado !== "Realizada" ||
+                !consultaRealizada ||
                 aGuardar
               }
               className="rounded-lg bg-primaria px-6 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"

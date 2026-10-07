@@ -70,7 +70,9 @@ function CartaoResumo({
 function EstadoConsulta({ estado }) {
   const estilos = {
     Agendada: "bg-blue-50 text-blue-700",
+    Confirmada: "bg-indigo-50 text-indigo-700",
     Realizada: "bg-green-50 text-green-700",
+    Concluída: "bg-green-50 text-green-700",
     Cancelada: "bg-gray-100 text-gray-600",
   };
 
@@ -118,7 +120,9 @@ export default function DashboardMedico() {
   const hoje = obterDataLocal();
 
   const consultasAgendadas = consultas.filter(
-    (consulta) => consulta.estado === "Agendada"
+    (consulta) =>
+      consulta.estado === "Agendada" ||
+      consulta.estado === "Confirmada"
   );
 
   const consultasHoje = consultasAgendadas.filter(
@@ -141,9 +145,6 @@ export default function DashboardMedico() {
 
   const nomeMedico =
     medico.nome || "Profissional de saúde";
-
-  const primeiroNome =
-    nomeMedico.trim().split(/\s+/)[0];
 
   return (
     <main className="min-h-[70vh] bg-gray-50/70">
@@ -216,9 +217,9 @@ export default function DashboardMedico() {
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <CartaoResumo
-              titulo="Consultas agendadas"
+              titulo="Consultas por atender"
               valor={consultasAgendadas.length}
-              descricao="Marcações por atender"
+              descricao="Agendadas e confirmadas"
               simbolo="C"
               cor="bg-blue-50 text-blue-700"
             />
@@ -270,7 +271,7 @@ export default function DashboardMedico() {
                 </h2>
 
                 <p className="mt-1 text-sm text-texto-secundario">
-                  As próximas marcações confirmadas na sua agenda.
+                  As próximas marcações agendadas ou confirmadas.
                 </p>
               </div>
 
@@ -304,8 +305,9 @@ export default function DashboardMedico() {
             ) : (
               <div className="mt-5 divide-y divide-gray-100">
                 {proximasConsultas.map((consulta) => (
-                  <article
+                  <Link
                     key={consulta.id}
+                    to={`/medico/agenda/${consulta.id}`}
                     className="flex flex-col gap-3 py-5 first:pt-2 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex min-w-0 gap-3">
@@ -350,7 +352,7 @@ export default function DashboardMedico() {
                     <div className="sm:shrink-0">
                       <EstadoConsulta estado={consulta.estado} />
                     </div>
-                  </article>
+                  </Link>
                 ))}
               </div>
             )}
@@ -392,8 +394,28 @@ export default function DashboardMedico() {
                   </span>
                 </Link>
 
-                <a
-                  href="#proximas-consultas"
+                <Link
+                  to="/medico/pacientes"
+                  className="group flex items-center gap-3 rounded-xl border border-gray-200 p-4 transition hover:border-primaria hover:bg-blue-50/50"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 font-bold text-violet-700">
+                    P
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-texto">
+                      Consultar pacientes
+                    </span>
+                    <span className="mt-1 block text-sm text-texto-secundario">
+                      Pesquisar pacientes e rever o histórico clínico.
+                    </span>
+                  </span>
+                  <span className="text-lg text-gray-400 transition group-hover:translate-x-1 group-hover:text-primaria">
+                    →
+                  </span>
+                </Link>
+
+                <Link
+                  to="/medico/agenda"
                   className="group flex items-center gap-3 rounded-xl border border-gray-200 p-4 transition hover:border-primaria hover:bg-blue-50/50"
                 >
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50 font-bold text-green-700">
@@ -413,7 +435,7 @@ export default function DashboardMedico() {
                   <span className="text-lg text-gray-400 transition group-hover:translate-x-1 group-hover:text-primaria">
                     →
                   </span>
-                </a>
+                </Link>
               </div>
             </section>
 
