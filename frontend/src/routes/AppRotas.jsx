@@ -28,6 +28,7 @@ import MinhasConsultas from "../paciente/pages/MinhasConsultasPaciente"
 import DashboardPaciente from "../paciente/pages/DashboardPaciente"
 import PerfilPaciente from "../paciente/pages/PerfilPaciente"
 import DetalhesConsulta from "../paciente/pages/DetalhesConsulta"
+import HistoricoClinicoPaciente from "../paciente/pages/HistoricoClinicoPaciente"
 
 /* Páginas do médico */
 import DashboardMedico from "../medico/pages/DashboardMedico"
@@ -147,6 +148,11 @@ function AppRotas() {
             <Route
               path="/paciente/perfil"
               element={<PerfilPaciente />}
+            />
+
+            <Route
+              path="/paciente/historico-clinico"
+              element={<HistoricoClinicoPaciente />}
             />
 
           </Route>

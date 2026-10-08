@@ -1,6 +1,6 @@
 
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 
 import medicos from "../../data/medicos";
 import {
@@ -11,34 +11,34 @@ import { obterUsuarioAutenticado } from "../../data/usuarios";
 
 export default function MinhasConsultas() {
   const navigate = useNavigate();
-
-  const [consultas, setConsultas] = useState([]);
   const [erro, setErro] = useState("");
-  const [atualizacao, setAtualizacao] = useState(0);
 
-  useEffect(() => {
-    const paciente = obterUsuarioAutenticado();
+  const paciente = obterUsuarioAutenticado();
 
-    if (!paciente) {
-      navigate("/login");
-      return;
-    }
+  if (!paciente) {
+    navigate("/login");
+    return null;
+  }
 
-    if (
-      paciente.tipo !== "paciente" &&
-      paciente.role !== "paciente"
-    ) {
-      navigate("/");
-      return;
-    }
+  if (
+    paciente.tipo !== "paciente" &&
+    paciente.role !== "paciente"
+  ) {
+    navigate("/");
+    return null;
+  }
 
-    setConsultas(obterConsultasDoPaciente(paciente.id));
-  }, [navigate, atualizacao]);
+  if (paciente.ativo === false) {
+    navigate("/login");
+    return null;
+  }
+
+  const consultas = obterConsultasDoPaciente(paciente.id);
 
   function tratarCancelamento(consultaId) {
-    const paciente = obterUsuarioAutenticado();
+    const pacienteAtual = obterUsuarioAutenticado();
 
-    if (!paciente) {
+    if (!pacienteAtual) {
       navigate("/login");
       return;
     }
@@ -50,9 +50,8 @@ export default function MinhasConsultas() {
     if (!confirmar) return;
 
     try {
-      cancelarConsulta(consultaId, paciente.id);
+      cancelarConsulta(consultaId, pacienteAtual.id);
       setErro("");
-      setAtualizacao((valor) => valor + 1);
     } catch (error) {
       setErro(error.message || "Não foi possível cancelar a consulta.");
     }
@@ -159,15 +158,24 @@ export default function MinhasConsultas() {
                   </p>
                 </div>
 
-                {consulta.estado === "Agendada" && (
-                  <button
-                    type="button"
-                    onClick={() => tratarCancelamento(consulta.id)}
-                    className="mt-4 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link
+                    to={`/paciente/minhas-consultas/${consulta.id}`}
+                    className="rounded-lg bg-primaria px-4 py-2 text-sm font-medium text-white hover:bg-primaria-hover transition"
                   >
-                    Cancelar consulta
-                  </button>
-                )}
+                    Ver detalhes
+                  </Link>
+
+                  {consulta.estado === "Agendada" && (
+                    <button
+                      type="button"
+                      onClick={() => tratarCancelamento(consulta.id)}
+                      className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                    >
+                      Cancelar consulta
+                    </button>
+                  )}
+                </div>
               </article>
             );
           })}

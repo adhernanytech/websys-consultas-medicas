@@ -178,3 +178,20 @@ export function guardarRegistoClinico({
 
   return registo
 }
+
+export function obterRegistosClinicosDoPaciente(pacienteId) {
+  if (pacienteId == null) return []
+
+  const registos = obterRegistosClinicos()
+
+  return registos
+    .filter(
+      (registo) =>
+        String(registo.pacienteId) === String(pacienteId)
+    )
+    .sort((a, b) => {
+      const dataA = new Date(a.atualizadoEm || a.criadoEm)
+      const dataB = new Date(b.atualizadoEm || b.criadoEm)
+      return dataB - dataA
+    })
+}

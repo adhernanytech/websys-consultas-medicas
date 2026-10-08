@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 import ResumoCard from "../../components/paciente/ResumoCard"
@@ -13,76 +12,57 @@ function PacienteDashboard() {
 
   const navegar = useNavigate()
 
-  const [paciente, setPaciente] = useState(null)
+  const usuario =
+    obterUsuarioAutenticado()
 
-  const [resumo, setResumo] = useState({
-    proximasConsultas: 0,
-    consultasRealizadas: 0,
-    consultasCanceladas: 0
-  })
+  if (!usuario) {
+    navegar("/login")
+    return null
+  }
 
-  const [proximaConsulta, setProximaConsulta] = useState(null)
+  if (usuario.tipo !== "paciente" && usuario.role !== "paciente") {
+    navegar("/")
+    return null
+  }
 
-  useEffect(() => {
+  if (usuario.ativo === false) {
+    navegar("/login")
+    return null
+  }
 
-    const usuario =
-      obterUsuarioAutenticado()
+  const consultasGuardadas =
+    JSON.parse(
+      localStorage.getItem("consultas")
+    ) || []
 
-    if (!usuario) {
-      navegar("/login")
-      return
-    }
+  const consultasDoPaciente =
+    consultasGuardadas.filter(
+      (consulta) =>
+        consulta.pacienteId === usuario.id
+    )
 
-    if (usuario.tipo !== "paciente") {
-      navegar("/")
-      return
-    }
+  const consultasAtivas =
+    consultasDoPaciente.filter(
+      (consulta) =>
+        consulta.estado === "Agendada" ||
+        consulta.estado === "Confirmada"
+    )
 
-    setPaciente(usuario)
+  const consultasRealizadas =
+    consultasDoPaciente.filter(
+      (consulta) =>
+        consulta.estado === "Concluída"
+    )
 
-    const consultasGuardadas =
-      JSON.parse(
-        localStorage.getItem("consultas")
-      ) || []
+  const consultasCanceladas =
+    consultasDoPaciente.filter(
+      (consulta) =>
+        consulta.estado === "Cancelada"
+    )
 
-    const consultasDoPaciente =
-      consultasGuardadas.filter(
-        (consulta) =>
-          consulta.pacienteId === usuario.id
-      )
-
-    const consultasAtivas =
-      consultasDoPaciente.filter(
-        (consulta) =>
-          consulta.estado === "Agendada" ||
-          consulta.estado === "Confirmada"
-      )
-
-    const consultasRealizadas =
-      consultasDoPaciente.filter(
-        (consulta) =>
-          consulta.estado === "Concluída"
-      )
-
-    const consultasCanceladas =
-      consultasDoPaciente.filter(
-        (consulta) =>
-          consulta.estado === "Cancelada"
-      )
-
-    setResumo({
-      proximasConsultas: consultasAtivas.length,
-      consultasRealizadas:
-        consultasRealizadas.length,
-      consultasCanceladas:
-        consultasCanceladas.length
-    })
-
-    if (consultasAtivas.length > 0) {
-
-      const consultasOrdenadas =
-        [...consultasAtivas].sort((a, b) => {
-
+  const proximaConsulta =
+    consultasAtivas.length > 0
+      ? [...consultasAtivas].sort((a, b) => {
           const dataA =
             new Date(
               `${a.data}T${a.horario}`
@@ -94,18 +74,8 @@ function PacienteDashboard() {
             )
 
           return dataA - dataB
-        })
-
-      setProximaConsulta(
-        consultasOrdenadas[0]
-      )
-    }
-
-  }, [navegar])
-
-  if (!paciente) {
-    return null
-  }
+        })[0]
+      : null
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -122,11 +92,11 @@ function PacienteDashboard() {
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-3">
 
-            {paciente.foto ? (
+            {usuario.foto ? (
 
               <img
-                src={paciente.foto}
-                alt={`Fotografia de ${paciente.nome}`}
+                src={usuario.foto}
+                alt={`Fotografia de ${usuario.nome}`}
                 className="
                   w-16
                   h-16
@@ -151,7 +121,7 @@ function PacienteDashboard() {
                 "
               >
                 <span className="text-primaria font-bold text-xl">
-                  {paciente.nome
+                  {usuario.nome
                     .charAt(0)
                     .toUpperCase()}
                 </span>
@@ -162,7 +132,7 @@ function PacienteDashboard() {
             <div>
 
               <h1 className="text-3xl md:text-4xl font-bold text-texto">
-                Olá, {paciente.nome}
+                Olá, {usuario.nome}
               </h1>
 
               <p className="text-texto-secundario mt-2">
@@ -185,19 +155,19 @@ function PacienteDashboard() {
 
           <ResumoCard
             titulo="Próximas consultas"
-            valor={resumo.proximasConsultas}
+            valor={consultasAtivas.length}
             descricao="Consultas agendadas"
           />
 
           <ResumoCard
             titulo="Consultas realizadas"
-            valor={resumo.consultasRealizadas}
+            valor={consultasRealizadas.length}
             descricao="Total de consultas realizadas"
           />
 
           <ResumoCard
             titulo="Consultas canceladas"
-            valor={resumo.consultasCanceladas}
+            valor={consultasCanceladas.length}
             descricao="Consultas canceladas"
           />
 

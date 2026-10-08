@@ -103,6 +103,34 @@ function AcoesRapidas() {
 
         </Link>
 
+        {/* Histórico clínico */}
+
+        <Link
+          to="/paciente/historico-clinico"
+          className="
+          bg-white
+            border border-borda
+            rounded-xl
+            p-6
+            text-left
+            shadow-sm
+            hover:shadow-md
+            hover:-translate-y-0.5
+            transition
+            cursor-pointer
+            block
+          "
+        >
+          <p className="font-semibold text-texto">
+            Histórico clínico
+          </p>
+
+          <p className="text-sm text-texto-secundario mt-1">
+            Consulte todos os seus registos clínicos.
+          </p>
+
+        </Link>
+
 
       </div>
 
