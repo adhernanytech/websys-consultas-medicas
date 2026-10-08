@@ -4,13 +4,15 @@ import ResumoCard from "../../components/paciente/ResumoCard"
 import ProximaConsulta from "../../components/paciente/ProximaConsulta"
 import AcoesRapidas from "../../components/paciente/AcoesRapidas"
 
-import {
-  obterUsuarioAutenticado
-} from "../../data/usuarios"
+import { obterUsuarioAutenticado } from "../../data/usuarios"
+import { useStorageSync } from "../../hooks/useStorageSync"
 
 function PacienteDashboard() {
 
   const navegar = useNavigate()
+
+  // Forçar re-render quando consultas em localStorage mudam
+  useStorageSync("consultas")
 
   const usuario =
     obterUsuarioAutenticado()

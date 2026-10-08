@@ -4,9 +4,14 @@ import { obterUsuarioAutenticado } from "../../data/usuarios"
 import {
   obterRegistosClinicosDoPaciente,
 } from "../../data/registrosClinicos"
+import { useStorageSync } from "../../hooks/useStorageSync"
 
 export default function HistoricoClinicoPaciente() {
   const navegar = useNavigate()
+
+  // Forçar re-render quando registos clínicos ou consultas mudam
+  useStorageSync("registosClinicos")
+  useStorageSync("consultas")
 
   const usuario = obterUsuarioAutenticado()
 
