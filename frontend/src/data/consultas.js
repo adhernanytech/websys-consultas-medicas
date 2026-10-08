@@ -1,154 +1,809 @@
-
 import {
   obterDisponibilidades,
   guardarDisponibilidades,
-} from "./disponibilidades";
+} from "./disponibilidades"
 
-const CHAVE_CONSULTAS = "consultas";
+const CHAVE_CONSULTAS = "consultas"
 
 export function obterConsultas() {
   try {
     const dados = JSON.parse(
       localStorage.getItem(CHAVE_CONSULTAS)
-    );
+    )
 
-    return Array.isArray(dados) ? dados : [];
+    return Array.isArray(dados) ? dados : []
   } catch {
-    return [];
+    return []
   }
 }
 
 export function guardarConsultas(consultas) {
+  if (!Array.isArray(consultas)) {
+    throw new Error(
+      "A lista de consultas deve ser um array."
+    )
+  }
+
   localStorage.setItem(
     CHAVE_CONSULTAS,
     JSON.stringify(consultas)
-  );
+  )
+}
+
+export function obterConsultaPorId(consultaId) {
+  return (
+    obterConsultas().find(
+      (consulta) =>
+        String(consulta.id) === String(consultaId)
+    ) || null
+  )
 }
 
 export function obterConsultasDoPaciente(pacienteId) {
-  return obterConsultas()
-    .filter(
-      (consulta) =>
-        String(consulta.pacienteId) === String(pacienteId)
-    )
-    .sort((a, b) =>
-      `${b.data}T${b.horario}`.localeCompare(
-        `${a.data}T${a.horario}`
-      )
-    );
+  return obterConsultas().filter(
+    (consulta) =>
+      String(consulta.pacienteId) === String(pacienteId)
+  )
 }
 
 export function obterConsultasDoMedico(medicoId) {
-  return obterConsultas()
-    .filter(
-      (consulta) =>
-        String(consulta.medicoId) === String(medicoId)
-    )
-    .sort((a, b) =>
-      `${a.data}T${a.horario}`.localeCompare(
-        `${b.data}T${b.horario}`
-      )
-    );
-}
-
-export function disponibilidadeEstaOcupada(disponibilidadeId) {
-  return obterConsultas().some(
+  return obterConsultas().filter(
     (consulta) =>
-      String(consulta.disponibilidadeId) === String(disponibilidadeId) &&
-      consulta.estado !== "Cancelada"
-  );
+      String(consulta.medicoId) === String(medicoId)
+  )
 }
 
-export function criarConsulta(dados) {
-  const disponibilidades = obterDisponibilidades();
+export function disponibilidadeEstaOcupada(
+  disponibilidadeId
+) {
+  const consultas = obterConsultas()
 
-  const disponibilidade = disponibilidades.find(
-    (item) =>
-      String(item.id) === String(dados.disponibilidadeId)
-  );
+  return consultas.some(
+    (consulta) =>
+      String(consulta.disponibilidadeId) ===
+        String(disponibilidadeId) &&
+      (
+        consulta.estado === "Agendada" ||
+        consulta.estado === "Confirmada"
+      )
+  )
+}
+
+/*
+ * Converte:
+ *
+ * data = "2026-10-07"
+ * horario = "14:30"
+ *
+ * para um objeto Date.
+ */
+function transformarDataHoraEmData(
+  data,
+  horario
+) {
+  if (!data || !horario) {
+    return null
+  }
+
+  const partesData = String(data).split("-")
+
+  if (partesData.length !== 3) {
+    return null
+  }
+
+  const partesHora = String(horario).split(":")
+
+  if (partesHora.length < 2) {
+    return null
+  }
+
+  const ano = Number(partesData[0])
+  const mes = Number(partesData[1]) - 1
+  const dia = Number(partesData[2])
+  const hora = Number(partesHora[0])
+  const minuto = Number(partesHora[1])
+
+  if (
+    !Number.isInteger(ano) ||
+    !Number.isInteger(mes) ||
+    !Number.isInteger(dia) ||
+    !Number.isInteger(hora) ||
+    !Number.isInteger(minuto)
+  ) {
+    return null
+  }
+
+  const dataHora = new Date(
+    ano,
+    mes,
+    dia,
+    hora,
+    minuto,
+    0,
+    0
+  )
+
+  if (Number.isNaN(dataHora.getTime())) {
+    return null
+  }
+
+  return dataHora
+}
+
+/*
+ * Verifica se a hora de início da consulta
+ * já chegou.
+ */
+function consultaJaComecou(consulta) {
+  const dataHora = transformarDataHoraEmData(
+    consulta.data,
+    consulta.horario
+  )
+
+  if (!dataHora) {
+    return false
+  }
+
+  return dataHora.getTime() <= Date.now()
+}
+
+/*
+ * Verifica se a consulta já terminou.
+ *
+ * Quando horaFim existe, usamos essa hora.
+ * Caso contrário, consideramos apenas a hora
+ * de início para efeitos de validação.
+ */
+function consultaJaTerminou(consulta) {
+  const dataHoraFim = transformarDataHoraEmData(
+    consulta.data,
+    consulta.horaFim
+  )
+
+  if (!dataHoraFim) {
+    return consultaJaComecou(consulta)
+  }
+
+  return dataHoraFim.getTime() <= Date.now()
+}
+
+function validarMotivo(motivo) {
+  const valor = String(motivo || "").trim()
+
+  if (valor.length < 10) {
+    throw new Error(
+      "O motivo da consulta deve ter pelo menos 10 caracteres."
+    )
+  }
+
+  if (valor.length > 1000) {
+    throw new Error(
+      "O motivo da consulta não pode ultrapassar 1000 caracteres."
+    )
+  }
+
+  return valor
+}
+
+export function criarConsulta({
+  pacienteId,
+  pacienteNome,
+  pacienteEmail,
+  medicoId,
+  medicoNome,
+  especialidade,
+  disponibilidadeId,
+  data,
+  horario,
+  horaFim,
+  motivo,
+}) {
+  if (!pacienteId) {
+    throw new Error("O paciente é obrigatório.")
+  }
+
+  if (!medicoId) {
+    throw new Error("O médico é obrigatório.")
+  }
+
+  if (!disponibilidadeId) {
+    throw new Error(
+      "A disponibilidade é obrigatória."
+    )
+  }
+
+  const disponibilidades =
+    obterDisponibilidades()
+
+  const disponibilidade =
+    disponibilidades.find(
+      (item) =>
+        String(item.id) ===
+        String(disponibilidadeId)
+    )
 
   if (!disponibilidade) {
-    throw new Error("A disponibilidade seleccionada não existe.");
+    throw new Error(
+      "O horário selecionado não existe."
+    )
   }
 
-  if (disponibilidade.estado !== "Disponível") {
-    throw new Error("Este horário já não está disponível.");
+  if (
+    String(disponibilidade.medicoId) !==
+    String(medicoId)
+  ) {
+    throw new Error(
+      "O horário selecionado não pertence a este médico."
+    )
   }
 
-  if (new Date(`${disponibilidade.data}T${disponibilidade.horaInicio}:00`) <= new Date()) {
-    throw new Error("Não é possível marcar uma consulta para um horário passado.");
+  if (
+    disponibilidade.estado !==
+    "Disponível"
+  ) {
+    throw new Error(
+      "Este horário já não está disponível."
+    )
   }
 
-  if (disponibilidadeEstaOcupada(disponibilidade.id)) {
-    throw new Error("Este horário já foi reservado.");
+  const dataConsulta =
+    data || disponibilidade.data
+
+  const horarioConsulta =
+    horario ||
+    disponibilidade.horaInicio ||
+    disponibilidade.horario
+
+  const horaFinal =
+    horaFim ||
+    disponibilidade.horaFim
+
+  const dataHora =
+    transformarDataHoraEmData(
+      dataConsulta,
+      horarioConsulta
+    )
+
+  if (!dataHora) {
+    throw new Error(
+      "A data ou o horário da consulta é inválido."
+    )
   }
 
-  const consultas = obterConsultas();
+  if (
+    dataHora.getTime() <= Date.now()
+  ) {
+    throw new Error(
+      "Não é possível marcar uma consulta para uma data ou horário passado."
+    )
+  }
+
+  if (
+    disponibilidadeEstaOcupada(
+      disponibilidadeId
+    )
+  ) {
+    throw new Error(
+      "Este horário já foi reservado."
+    )
+  }
+
+  const motivoFinal =
+    validarMotivo(motivo)
+
+  const consultas =
+    obterConsultas()
 
   const novaConsulta = {
-    id: `cons-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    pacienteId: dados.pacienteId,
-    pacienteNome: dados.pacienteNome,
-    pacienteEmail: dados.pacienteEmail,
-    medicoId: disponibilidade.medicoId,
-    medicoNome: dados.medicoNome,
-    especialidade: dados.especialidade,
-    disponibilidadeId: disponibilidade.id,
-    data: disponibilidade.data,
-    horario: disponibilidade.horaInicio,
-    horaFim: disponibilidade.horaFim,
-    motivo: dados.motivo.trim(),
+    id: Date.now(),
+    pacienteId,
+    pacienteNome,
+    pacienteEmail,
+    medicoId,
+    medicoNome,
+    especialidade,
+    disponibilidadeId,
+    data: dataConsulta,
+    horario: horarioConsulta,
+    horaFim: horaFinal,
+    motivo: motivoFinal,
     estado: "Agendada",
-    criadaEm: new Date().toISOString(),
-  };
+    criadaEm:
+      new Date().toISOString(),
+  }
 
-  guardarConsultas([...consultas, novaConsulta]);
+  consultas.push(novaConsulta)
 
-  guardarDisponibilidades(
-    disponibilidades.map((item) =>
-      String(item.id) === String(disponibilidade.id)
-        ? { ...item, estado: "Ocupada" }
-        : item
+  guardarConsultas(consultas)
+
+  const disponibilidadeIndex =
+    disponibilidades.findIndex(
+      (item) =>
+        String(item.id) ===
+        String(disponibilidadeId)
     )
-  );
 
-  return novaConsulta;
+  if (disponibilidadeIndex !== -1) {
+    disponibilidades[
+      disponibilidadeIndex
+    ] = {
+      ...disponibilidades[
+        disponibilidadeIndex
+      ],
+      estado: "Ocupada",
+    }
+
+    guardarDisponibilidades(
+      disponibilidades
+    )
+  }
+
+  return novaConsulta
 }
 
-export function cancelarConsulta(consultaId, pacienteId) {
-  const consultas = obterConsultas();
-
-  const consulta = consultas.find(
-    (item) =>
-      String(item.id) === String(consultaId) &&
-      String(item.pacienteId) === String(pacienteId)
-  );
-
-  if (!consulta) {
-    throw new Error("Não foi encontrada uma consulta deste paciente.");
+export function editarConsulta(
+  consultaId,
+  pacienteId,
+  {
+    disponibilidadeId,
+    data,
+    horario,
+    horaFim,
+    motivo,
   }
+) {
+  const consultas =
+    obterConsultas()
+
+  const indice =
+    consultas.findIndex(
+      (consulta) =>
+        String(consulta.id) ===
+          String(consultaId) &&
+        String(consulta.pacienteId) ===
+          String(pacienteId)
+    )
+
+  if (indice === -1) {
+    throw new Error(
+      "Consulta não encontrada ou não pertence a este paciente."
+    )
+  }
+
+  const consultaAtual =
+    consultas[indice]
+
+  if (
+    consultaAtual.estado !==
+    "Agendada"
+  ) {
+    throw new Error(
+      "Apenas consultas agendadas podem ser alteradas."
+    )
+  }
+
+  const disponibilidades =
+    obterDisponibilidades()
+
+  let novaDisponibilidade
+
+  if (disponibilidadeId) {
+    novaDisponibilidade =
+      disponibilidades.find(
+        (item) =>
+          String(item.id) ===
+          String(disponibilidadeId)
+      )
+
+    if (!novaDisponibilidade) {
+      throw new Error(
+        "O novo horário selecionado não existe."
+      )
+    }
+
+    if (
+      String(
+        novaDisponibilidade.medicoId
+      ) !==
+      String(consultaAtual.medicoId)
+    ) {
+      throw new Error(
+        "O novo horário não pertence ao médico da consulta."
+      )
+    }
+
+    if (
+      novaDisponibilidade.estado !==
+        "Disponível" &&
+      String(
+        novaDisponibilidade.id
+      ) !==
+        String(
+          consultaAtual.disponibilidadeId
+        )
+    ) {
+      throw new Error(
+        "O novo horário já não está disponível."
+      )
+    }
+
+    if (
+      disponibilidadeEstaOcupada(
+        novaDisponibilidade.id
+      ) &&
+      String(
+        novaDisponibilidade.id
+      ) !==
+        String(
+          consultaAtual.disponibilidadeId
+        )
+    ) {
+      throw new Error(
+        "O novo horário já foi reservado."
+      )
+    }
+  } else {
+    novaDisponibilidade =
+      disponibilidades.find(
+        (item) =>
+          String(item.id) ===
+          String(
+            consultaAtual.disponibilidadeId
+          )
+      )
+  }
+
+  const novaData =
+    data ||
+    novaDisponibilidade?.data ||
+    consultaAtual.data
+
+  const novoHorario =
+    horario ||
+    novaDisponibilidade?.horaInicio ||
+    consultaAtual.horario
+
+  const novaHoraFim =
+    horaFim ||
+    novaDisponibilidade?.horaFim ||
+    consultaAtual.horaFim
+
+  const dataHora =
+    transformarDataHoraEmData(
+      novaData,
+      novoHorario
+    )
+
+  if (!dataHora) {
+    throw new Error(
+      "A data ou o horário selecionado é inválido."
+    )
+  }
+
+  if (
+    dataHora.getTime() <= Date.now()
+  ) {
+    throw new Error(
+      "A nova consulta deve ser marcada para uma data e horário futuros."
+    )
+  }
+
+  const motivoFinal =
+    validarMotivo(
+      motivo ?? consultaAtual.motivo
+    )
+
+  const disponibilidadeAntigaId =
+    consultaAtual.disponibilidadeId
+
+  const disponibilidadeNovaId =
+    novaDisponibilidade?.id ||
+    disponibilidadeAntigaId
+
+  if (
+    String(disponibilidadeNovaId) !==
+    String(disponibilidadeAntigaId)
+  ) {
+    const indiceNova =
+      disponibilidades.findIndex(
+        (item) =>
+          String(item.id) ===
+          String(disponibilidadeNovaId)
+      )
+
+    const indiceAntiga =
+      disponibilidades.findIndex(
+        (item) =>
+          String(item.id) ===
+          String(disponibilidadeAntigaId)
+      )
+
+    if (indiceNova !== -1) {
+      disponibilidades[indiceNova] = {
+        ...disponibilidades[
+          indiceNova
+        ],
+        estado: "Ocupada",
+      }
+    }
+
+    if (indiceAntiga !== -1) {
+      disponibilidades[
+        indiceAntiga
+      ] = {
+        ...disponibilidades[
+          indiceAntiga
+        ],
+        estado: "Disponível",
+      }
+    }
+
+    guardarDisponibilidades(
+      disponibilidades
+    )
+  }
+
+  consultas[indice] = {
+    ...consultaAtual,
+    disponibilidadeId:
+      disponibilidadeNovaId,
+    data: novaData,
+    horario: novoHorario,
+    horaFim: novaHoraFim,
+    motivo: motivoFinal,
+    actualizadaEm:
+      new Date().toISOString(),
+  }
+
+  guardarConsultas(consultas)
+
+  return consultas[indice]
+}
+
+export function cancelarConsulta(
+  consultaId,
+  pacienteId
+) {
+  const consultas =
+    obterConsultas()
+
+  const indice =
+    consultas.findIndex(
+      (consulta) =>
+        String(consulta.id) ===
+          String(consultaId) &&
+        String(consulta.pacienteId) ===
+          String(pacienteId)
+    )
+
+  if (indice === -1) {
+    throw new Error(
+      "Consulta não encontrada."
+    )
+  }
+
+  const consulta =
+    consultas[indice]
+
+  if (
+    consulta.estado !==
+      "Agendada" &&
+    consulta.estado !==
+      "Confirmada"
+  ) {
+    throw new Error(
+      "Apenas consultas agendadas podem ser canceladas."
+    )
+  }
+
+  consultas[indice] = {
+    ...consulta,
+    estado: "Cancelada",
+    canceladaEm:
+      new Date().toISOString(),
+    canceladaPor: "paciente",
+  }
+
+  guardarConsultas(consultas)
+
+  libertarDisponibilidade(
+    consulta.disponibilidadeId
+  )
+
+  return consultas[indice]
+}
+
+export function cancelarConsultaPeloMedico(
+  consultaId,
+  medicoId
+) {
+  const consultas =
+    obterConsultas()
+
+  const indice =
+    consultas.findIndex(
+      (consulta) =>
+        String(consulta.id) ===
+          String(consultaId) &&
+        String(consulta.medicoId) ===
+          String(medicoId)
+    )
+
+  if (indice === -1) {
+    throw new Error(
+      "Consulta não encontrada ou não pertence a este médico."
+    )
+  }
+
+  const consulta =
+    consultas[indice]
+
+  if (
+    consulta.estado !==
+      "Agendada" &&
+    consulta.estado !==
+      "Confirmada"
+  ) {
+    throw new Error(
+      "Apenas consultas agendadas podem ser canceladas."
+    )
+  }
+
+  consultas[indice] = {
+    ...consulta,
+    estado: "Cancelada",
+    canceladaEm:
+      new Date().toISOString(),
+    canceladaPor: "medico",
+  }
+
+  guardarConsultas(consultas)
+
+  libertarDisponibilidade(
+    consulta.disponibilidadeId
+  )
+
+  return consultas[indice]
+}
+
+export function confirmarConsultaPeloMedico(
+  consultaId,
+  medicoId
+) {
+  const consultas =
+    obterConsultas()
+
+  const indice =
+    consultas.findIndex(
+      (consulta) =>
+        String(consulta.id) ===
+          String(consultaId) &&
+        String(consulta.medicoId) ===
+          String(medicoId)
+    )
+
+  if (indice === -1) {
+    throw new Error(
+      "Consulta não encontrada ou não pertence a este médico."
+    )
+  }
+
+  const consulta =
+    consultas[indice]
 
   if (consulta.estado !== "Agendada") {
-    throw new Error("Só é possível cancelar consultas agendadas.");
+    throw new Error(
+      "Apenas consultas agendadas podem ser confirmadas."
+    )
   }
 
-  guardarConsultas(
-    consultas.map((item) =>
-      String(item.id) === String(consultaId)
-        ? { ...item, estado: "Cancelada" }
-        : item
-    )
-  );
+  consultas[indice] = {
+    ...consulta,
+    estado: "Confirmada",
+    confirmadaEm: new Date().toISOString(),
+  }
 
-  const disponibilidades = obterDisponibilidades();
+  guardarConsultas(consultas)
+
+  return consultas[indice]
+}
+
+export function marcarConsultaComoRealizada(
+  consultaId,
+  medicoId
+) {
+  const consultas =
+    obterConsultas()
+
+  const indice =
+    consultas.findIndex(
+      (consulta) =>
+        String(consulta.id) ===
+          String(consultaId) &&
+        String(consulta.medicoId) ===
+          String(medicoId)
+    )
+
+  if (indice === -1) {
+    throw new Error(
+      "Consulta não encontrada ou não pertence a este médico."
+    )
+  }
+
+  const consulta =
+    consultas[indice]
+
+  if (
+    consulta.estado !==
+      "Agendada" &&
+    consulta.estado !==
+      "Confirmada"
+  ) {
+    throw new Error(
+      "Apenas consultas agendadas podem ser marcadas como realizadas."
+    )
+  }
+
+  /*
+   * Não permitimos marcar uma consulta
+   * como realizada antes do seu horário.
+   */
+  if (!consultaJaComecou(consulta)) {
+    throw new Error(
+      "Esta consulta ainda não começou. Só pode ser marcada como realizada depois do horário agendado."
+    )
+  }
+
+  consultas[indice] = {
+    ...consulta,
+    estado: "Realizada",
+    realizadaEm:
+      new Date().toISOString(),
+  }
+
+  guardarConsultas(consultas)
+
+  return consultas[indice]
+}
+
+/*
+ * Esta função fica disponível para futuras
+ * regras de negócio que precisem verificar
+ * se o atendimento já terminou.
+ */
+export function consultaJaTerminouPorHorario(
+  consulta
+) {
+  return consultaJaTerminou(consulta)
+}
+
+function libertarDisponibilidade(
+  disponibilidadeId
+) {
+  if (!disponibilidadeId) {
+    return
+  }
+
+  const disponibilidades =
+    obterDisponibilidades()
+
+  const indice =
+    disponibilidades.findIndex(
+      (disponibilidade) =>
+        String(disponibilidade.id) ===
+        String(disponibilidadeId)
+    )
+
+  if (indice === -1) {
+    return
+  }
+
+  disponibilidades[indice] = {
+    ...disponibilidades[indice],
+    estado: "Disponível",
+  }
 
   guardarDisponibilidades(
-    disponibilidades.map((item) =>
-      String(item.id) === String(consulta.disponibilidadeId)
-        ? { ...item, estado: "Disponível" }
-        : item
-    )
-  );
-
-  return true;
+    disponibilidades
+  )
 }

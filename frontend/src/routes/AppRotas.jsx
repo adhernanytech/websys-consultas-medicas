@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 
 /* Layouts */
 import LayoutPublico from "../layouts/LayoutPublico"
-import PacienteLayout from "../paciente/layouts/PacienteLayout"
+import LayoutPaciente from "../paciente/layouts/PacienteLayout"
+import LayoutMedico from "../medico/layout/LayoutMedico";
 
 /* ROLAGEM */
 import ScrollToTop from "../components/ScrollPraCima"
@@ -27,19 +28,17 @@ import MinhasConsultas from "../paciente/pages/MinhasConsultasPaciente"
 import DashboardPaciente from "../paciente/pages/DashboardPaciente"
 import PerfilPaciente from "../paciente/pages/PerfilPaciente"
 import DetalhesConsulta from "../paciente/pages/DetalhesConsulta"
-import HistoricoClinicoPaciente from "../paciente/pages/HistoricoClinicoPaciente"
 
 /* Páginas do médico */
 import DashboardMedico from "../medico/pages/DashboardMedico"
 import GerirDisponibilidade from "../medico/pages/GerirDisponibilidade"
 import PerfilMedicoPendente from "../medico/pages/PerfilMedicoPendente"
-<<<<<<< Updated upstream
-=======
 import MinhaAgendaMedico from "../medico/pages/MinhaAgendaMedico"
+import MyPerfilMedico from "../medico/pages/MyPerfilMedico"
 import DetalhesConsultaMedico from "../medico/pages/DetalhesConsultaMedico"
+import PerfilMedicoPaciente from "../medico/pages/PerfilPacienteMedico"
 import RegistroClinicoConsulta from "../medico/pages/RegistroClinicoConsulta"
-import PerfilPacienteMedico from "../medico/pages/PerfilPacienteMedico"
->>>>>>> Stashed changes
+import PacientesMedico from "../medico/pages/PacientesMedico"
 
 /* Páginas do admin */
 import DashboardAdmin from "../administrador/pages/DashboardAdmin"
@@ -108,7 +107,7 @@ function AppRotas() {
 
         <Route element={<RotaPacienteProtegida />}>
 
-          <Route element={<PacienteLayout />}>
+          <Route element={<LayoutPaciente />}>
 
             <Route
               path="/paciente/dashboard"
@@ -150,59 +149,49 @@ function AppRotas() {
               element={<PerfilPaciente />}
             />
 
-            <Route
-              path="/paciente/historico-clinico"
-              element={<HistoricoClinicoPaciente />}
-            />
-
           </Route>
 
         </Route>
 
+
         {/* ÁREA DO MÉDICO */}
-
         <Route element={<RotaMedicoProtegida />}>
-          <Route
-            path="/medico/dashboard"
-            element={<DashboardMedico />}
-          />
+          <Route element={<LayoutMedico />}>
 
-          <Route
-            path="/medico/disponibilidades"
-            element={<GerirDisponibilidade />}
-          />
-          
-          {/* Conta médica ainda sem perfil associado */}
+            <Route
+              path="/medico/dashboard"
+              element={<DashboardMedico />}
+            />
 
-<<<<<<< Updated upstream
-          <Route
-            path="/medico/perfil-pendente"
-            element={<PerfilMedicoPendente />}
-          />
-=======
             <Route
               path="/medico/agenda"
               element={<MinhaAgendaMedico />}
             />
-
             <Route
               path="/medico/agenda/:id"
               element={<DetalhesConsultaMedico />}
             />
-
             <Route
               path="/medico/agenda/:id/registo-clinico"
               element={<RegistroClinicoConsulta />}
             />
-
+            <Route
+              path="/medico/pacientes"
+              element={<PacientesMedico />}
+            />
             <Route
               path="/medico/pacientes/:pacienteId"
-              element={<PerfilPacienteMedico />}
+              element={<PerfilMedicoPaciente />}
             />
 
             <Route
               path="/medico/disponibilidades"
               element={<GerirDisponibilidade />}
+            />
+
+            <Route
+              path="/medico/meu-perfil"
+              element={<MyPerfilMedico />}
             />
 
             {/* Conta médica ainda sem perfil associado */}
@@ -213,8 +202,8 @@ function AppRotas() {
             />
 
           </Route>
->>>>>>> Stashed changes
         </Route>
+
 
 
         {/* Configuração inicial do administrador */}

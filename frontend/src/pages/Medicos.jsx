@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 
-import medicos from "../data/medicos"
+import { obterMedicos } from "../data/medicos"
 import DoctorCard from "../components/CardMedico"
 
 
 function Medicos() {
+  const medicos = obterMedicos()
 
   const [searchParams, setSearchParams] = useSearchParams()
 
