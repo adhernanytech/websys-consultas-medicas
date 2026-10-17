@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 import LayoutPublico from "../layouts/LayoutPublico"
 import LayoutPaciente from "../paciente/layouts/PacienteLayout"
 import LayoutMedico from "../medico/layout/LayoutMedico";
+import AdminLayout from "../administrador/layouts/LayoutAdmin"
 
 /* ROLAGEM */
 import ScrollToTop from "../components/ScrollPraCima"
@@ -28,6 +29,7 @@ import MinhasConsultas from "../paciente/pages/MinhasConsultasPaciente"
 import DashboardPaciente from "../paciente/pages/DashboardPaciente"
 import PerfilPaciente from "../paciente/pages/PerfilPaciente"
 import DetalhesConsulta from "../paciente/pages/DetalhesConsulta"
+import HistoricoClinicoPaciente from "../paciente/pages/HistoricoClinicoPaciente"
 
 /* Páginas do médico */
 import DashboardMedico from "../medico/pages/DashboardMedico"
@@ -39,11 +41,20 @@ import DetalhesConsultaMedico from "../medico/pages/DetalhesConsultaMedico"
 import PerfilMedicoPaciente from "../medico/pages/PerfilPacienteMedico"
 import RegistroClinicoConsulta from "../medico/pages/RegistroClinicoConsulta"
 import PacientesMedico from "../medico/pages/PacientesMedico"
+import AlterarSenhaInicial from "../medico/pages/AlterarSenhaInicial";
+
+/* Redefinir senha */
+import EsqueciSenha from '../pages/EsqueciSenha';
+import RedefinirSenha from '../pages/RedefinirSenha';
+
 
 /* Páginas do admin */
 import DashboardAdmin from "../administrador/pages/DashboardAdmin"
 import ConfigurarAdmin from "../administrador/pages/ConfigurarAdmin"
 import GerirContasMedicas from "../administrador/pages/GerirContasMedicas"
+import GerirUtilizadores from "../administrador/pages/GerirUtilizadores"
+import GerirEspecialidades from "../administrador/pages/GerirEspecialidades"
+import CriarMedico from "../administrador/pages/CriarMedico.jsx"
 
 
 
@@ -86,6 +97,16 @@ function AppRotas() {
           <Route
             path="/sobre"
             element={<SobreNos />}
+          />
+
+          <Route 
+            path="/esqueci-senha" 
+            element={<EsqueciSenha />} 
+          />
+
+          <Route 
+            path="/redefinir-senha" 
+            element={<RedefinirSenha />} 
           />
 
           <Route
@@ -149,6 +170,11 @@ function AppRotas() {
               element={<PerfilPaciente />}
             />
 
+            <Route
+              path="/paciente/historico-clinico"
+              element={<HistoricoClinicoPaciente />}
+            />
+
           </Route>
 
         </Route>
@@ -194,6 +220,11 @@ function AppRotas() {
               element={<MyPerfilMedico />}
             />
 
+            <Route
+              path="/medico/alterar-senha-inicial"
+              element={<AlterarSenhaInicial />}
+            />
+
             {/* Conta médica ainda sem perfil associado */}
 
             <Route
@@ -206,23 +237,47 @@ function AppRotas() {
 
 
 
-        {/* Configuração inicial do administrador */}
+        {/* CONFIGURAÇÃO INICIAL DO ADMIN */}
+
         <Route
           path="/admin/configurar"
           element={<ConfigurarAdmin />}
         />
 
-        {/* Área administrativa protegida */}
-        <Route element={<RotaAdminProtegida />}>
-          <Route
-            path="/admin/dashboard"
-            element={<DashboardAdmin />}
-          />
 
-          <Route
-            path="/admin/contas-medicas"
-            element={<GerirContasMedicas />}
-          />
+        {/* ÁREA ADMINISTRATIVA PROTEGIDA */}
+
+        <Route element={<RotaAdminProtegida />}>
+
+          <Route element={<AdminLayout />}>
+
+            <Route
+              path="/admin/dashboard"
+              element={<DashboardAdmin />}
+            />
+
+            <Route
+              path="/admin/contas-medicas"
+              element={<GerirContasMedicas />}
+            />
+
+            <Route
+              path="/admin/utilizadores"
+              element={<GerirUtilizadores />}
+            />
+
+            <Route
+              path="/admin/especialidades"
+              element={<GerirEspecialidades />}
+            />
+
+            <Route
+              path="/admin/medicos/criar"
+              element={<CriarMedico />}
+            />
+
+          </Route>
+
         </Route>
 
       </Routes>

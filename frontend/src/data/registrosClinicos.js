@@ -2,7 +2,7 @@ import { obterConsultasDoMedico } from "./consultas"
 
 const CHAVE_REGISTOS_CLINICOS = "registosClinicos"
 
-export function obterRegistosClinicos() {
+export function obterRegistrosClinicos() {
   try {
     const dados = JSON.parse(localStorage.getItem(CHAVE_REGISTOS_CLINICOS))
     return Array.isArray(dados) ? dados : []
@@ -41,7 +41,7 @@ export function obterRegistoClinicoPorConsulta(
   }
 
   return (
-    obterRegistosClinicos().find(
+    obterRegistrosClinicos().find(
       (registo) =>
         String(registo.consultaId) === String(consultaId) &&
         String(registo.medicoId) === String(medicoId) &&
@@ -73,7 +73,7 @@ export function obterRegistosClinicosDoMedicoEPaciente(
     ])
   )
 
-  const registos = obterRegistosClinicos()
+  const registos = obterRegistrosClinicos()
 
   return registos
     .filter(
@@ -121,7 +121,7 @@ export function guardarRegistoClinico({
     )
   }
 
-  const registos = obterRegistosClinicos()
+  const registos = obterRegistrosClinicos()
 
   const agora = new Date().toISOString()
 
@@ -177,4 +177,21 @@ export function guardarRegistoClinico({
   guardarRegistosClinicos(registos)
 
   return registo
+}
+
+export function obterRegistosClinicosDoPaciente(pacienteId) {
+  if (pacienteId == null) return []
+
+  const registos = obterRegistrosClinicos()
+
+  return registos
+    .filter(
+      (registo) =>
+        String(registo.pacienteId) === String(pacienteId)
+    )
+    .sort((a, b) => {
+      const dataA = new Date(a.atualizadoEm || a.criadoEm)
+      const dataB = new Date(b.atualizadoEm || b.criadoEm)
+      return dataB - dataA
+    })
 }

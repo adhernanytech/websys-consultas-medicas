@@ -5,7 +5,7 @@ import DoctorCard from "../components/CardMedico"
 import EspecialidadeCard from "../components/EspecialidadeCard"
 
 import medicos from "../data/medicos"
-import especialidades from "../data/especialidades"
+import especialidadesIniciais from "../data/especialidades"
 
 
 function Home() {
@@ -33,7 +33,7 @@ function Home() {
     A página /especialidades continuará a mostrar todas.
   */
 
-  const especialidadesDestaque = especialidades.slice(0, 3)
+  const especialidadesDestaque = especialidadesIniciais.slice(0, 3)
 
 
   /*

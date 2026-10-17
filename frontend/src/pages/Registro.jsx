@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 
 import {
+  obterUsuarios,
   criarUsuario,
   guardarUsuarioAutenticado,
 } from "../data/usuarios";

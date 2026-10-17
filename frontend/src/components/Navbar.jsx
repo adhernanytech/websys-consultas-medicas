@@ -13,7 +13,7 @@ function Navbar() {
 
   return (
 
-    <nav className="bg-primaria text-white px-4 sm:px-6 py-4 shadow-md mb-5">
+    <nav className="bg-primaria text-white px-4 sm:px-6 py-4 shadow-md">
 
       <div className="max-w-6xl mx-auto">
 

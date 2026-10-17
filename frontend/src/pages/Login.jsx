@@ -1,6 +1,8 @@
-
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
+import { GoogleLogin } from '@react-oauth/google';
+
+
 
 import {
   obterUsuarios,
@@ -102,14 +104,23 @@ function Login() {
         return;
       }
 
+      
       guardarUsuarioAutenticado({
         ...usuario,
         role: tipo,
         tipo,
       });
 
-      const destinoSolicitado = location.state?.from?.pathname;
+      // A primeira palavra-passe é temporária.
+      // O médico deve alterá-la antes de aceder à área médica.
+      if (tipo === "medico" && usuario.deveAlterarSenha === true) {
+        navegar("/medico/alterar-senha-inicial", {
+          replace: true,
+        });
+        return;
+      }
 
+      const destinoSolicitado = location.state?.from?.pathname;
       // O destino original só será respeitado se corresponder
       // à área autorizada para este tipo de utilizador.
       if (destinoSolicitado) {
@@ -376,19 +387,12 @@ function Login() {
                 </button>
               </div>
 
-              <div className="text-right mt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMensagem(
-                      "A recuperação de palavra-passe será implementada posteriormente."
-                    );
-                    setTipoMensagem("sucesso");
-                  }}
-                  className="text-xs hover:underline"
-                >
-                  Esqueceu a palavra-passe?
-                </button>
+              <div className="flex items-center justify-between mt-2">
+                <div className="text-sm">
+                  <Link to="/esqueci-senha" className="font-medium text-blue-600 hover:text-blue-500">
+                    Esqueceu a senha?
+                  </Link>
+                </div>
               </div>
             </div>
 
@@ -413,23 +417,29 @@ function Login() {
               {carregando ? "A verificar..." : "Entrar"}
             </button>
 
-            <div className="flex items-center gap-4 my-5">
-              <div className="flex-1 h-px bg-gray-300" />
-              <span className="text-xs text-gray-500">ou</span>
-              <div className="flex-1 h-px bg-gray-300" />
-            </div>
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-100" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">Ou continue com</span>
+                </div>
+              </div>
 
-            <button
-              type="button"
-              onClick={loginComGoogle}
-              disabled={carregandoGoogle}
-              className="w-full border border-gray-300 bg-white py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 flex items-center justify-center gap-3"
-            >
-              <span className="font-bold">G</span>
-              {carregandoGoogle
-                ? "A ligar ao Google..."
-                : "Continuar com Google"}
-            </button>
+              <div className="mt-6 flex justify-center">
+                <GoogleLogin
+                  onSuccess={(credentialResponse) => {
+                    console.log("Token do Google recebido:", credentialResponse.credential);
+                    
+                  }}
+                  onError={() => {
+                    console.log('Login do Google falhou');
+                  }}
+                  useOneTap
+                />
+              </div>
+            </div>
           </form>
 
           <p className="text-center text-texto-secundario text-sm mt-5">

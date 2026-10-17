@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react"
+﻿import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 import {
   obterUsuarioAutenticado,
   actualizarUsuario
 } from "../../data/usuarios"
+import { useStorageSync } from "../../hooks/useStorageSync"
 
 import { prepararImagem } from "../../utils/imagem"
 
@@ -12,67 +13,43 @@ import { prepararImagem } from "../../utils/imagem"
 function PerfilPaciente() {
 
   const navegar = useNavigate()
-
-  const [paciente, setPaciente] = useState(null)
-
+  
+  // Forçar re-render quando utilizadores mudam
+  useStorageSync("usuarios")
+  
+  // Todos os hooks no topo, antes de qualquer lógica condicional
   const [modoEdicao, setModoEdicao] = useState(false)
-
+  const [processandoFoto, setProcessandoFoto] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [mensagem, setMensagem] = useState("")
+  const [erro, setErro] = useState("")
+  
+  const usuario = obterUsuarioAutenticado()
+  
   const [formulario, setFormulario] = useState({
-    nome: "",
-    telefone: ""
+    nome: usuario?.nome || "",
+    telefone: usuario?.telefone || ""
   })
+  
+  const [fotoPrevisualizacao, setFotoPrevisualizacao] = useState(
+    usuario?.foto || null
+  )
 
-  const [fotoPrevisualizacao, setFotoPrevisualizacao] =
-    useState(null)
+  // Verificações de autenticação
+  if (!usuario) {
+    navegar("/login")
+    return null
+  }
 
-  const [processandoFoto, setProcessandoFoto] =
-    useState(false)
+  if (usuario.tipo !== "paciente" && usuario.role !== "paciente") {
+    navegar("/")
+    return null
+  }
 
-  const [guardando, setGuardando] =
-    useState(false)
-
-  const [mensagem, setMensagem] =
-    useState("")
-
-  const [erro, setErro] =
-    useState("")
-
-
-  /* 
-     CARREGAR PACIENTE
-   */
-
-  useEffect(() => {
-
-    const usuario = obterUsuarioAutenticado()
-
-    if (!usuario) {
-      navegar("/login")
-      return
-    }
-
-    if (usuario.tipo !== "paciente") {
-      navegar("/")
-      return
-    }
-
-    setPaciente(usuario)
-
-    setFormulario({
-      nome: usuario.nome || "",
-      telefone: usuario.telefone || ""
-    })
-
-    setFotoPrevisualizacao(
-      usuario.foto || null
-    )
-
-  }, [navegar])
-
-
-  /* 
-     ALTERAR CAMPOS
-   */
+  if (usuario.ativo === false) {
+    navegar("/login")
+    return null
+  }
 
   function alterarCampo(evento) {
 
@@ -104,7 +81,7 @@ function PerfilPaciente() {
     if (!ficheiro.type.startsWith("image/")) {
 
       setErro(
-        "Seleccione um ficheiro de imagem válido."
+        "Seleccione um ficheiro de imagem vÃ¡lido."
       )
 
       return
@@ -128,7 +105,7 @@ function PerfilPaciente() {
       console.error(erro)
 
       setErro(
-        "Não foi possível processar a fotografia."
+        "NÃ£o foi possÃ­vel processar a fotografia."
       )
 
     } finally {
@@ -141,23 +118,23 @@ function PerfilPaciente() {
 
 
   /* 
-     CANCELAR EDIÇÃO
+     CANCELAR EDIÃ‡ÃƒO
    */
 
   function cancelarEdicao() {
 
-    if (!paciente) {
+    if (!usuario) {
       return
     }
 
 
     setFormulario({
-      nome: paciente.nome || "",
-      telefone: paciente.telefone || ""
+      nome: usuario.nome || "",
+      telefone: usuario.telefone || ""
     })
 
     setFotoPrevisualizacao(
-      paciente.foto || null
+      usuario.foto || null
     )
 
     setErro("")
@@ -169,14 +146,14 @@ function PerfilPaciente() {
 
 
   /* 
-     GUARDAR ALTERAÇÕES
+     GUARDAR ALTERAÃ‡Ã•ES
    */
 
   function guardarAlteracoes(evento) {
 
     evento.preventDefault()
 
-    if (!paciente) {
+    if (!usuario) {
       return
     }
 
@@ -192,12 +169,12 @@ function PerfilPaciente() {
       formulario.telefone.trim()
 
 
-    /* Validação do nome */
+    /* ValidaÃ§Ã£o do nome */
 
     if (!nome) {
 
       setErro(
-        "O nome completo é obrigatório."
+        "O nome completo Ã© obrigatÃ³rio."
       )
 
       return
@@ -221,7 +198,7 @@ function PerfilPaciente() {
 
       const usuarioAtualizado =
         actualizarUsuario(
-          paciente.id,
+          usuario.id,
           {
             nome,
             telefone,
@@ -233,7 +210,7 @@ function PerfilPaciente() {
       if (!usuarioAtualizado) {
 
         setErro(
-          "Não foi possível actualizar os dados."
+          "NÃ£o foi possÃ­vel actualizar os dados."
         )
 
         return
@@ -280,20 +257,20 @@ function PerfilPaciente() {
      ESTADO INICIAL
   */
 
-  if (!paciente) {
+  if (!usuario) {
     return null
   }
 
 
   const inicial =
-    paciente.nome?.charAt(0)?.toUpperCase() || "P"
+    usuario.nome?.charAt(0)?.toUpperCase() || "P"
 
 
   return (
     <div className="max-w-xl mx-auto">
 
       {/* 
-          CABEÇALHO
+          CABEÃ‡ALHO
        */}
 
       <div className="m-8">
@@ -360,7 +337,7 @@ function PerfilPaciente() {
       <div className="bg-fundo border border-borda rounded-2xl shadow-sm overflow-hidden">
 
         {/* 
-            CABEÇALHO DO PERFIL
+            CABEÃ‡ALHO DO PERFIL
         */}
 
         <div className="p-6 sm:p-8 border-b border-borda">
@@ -380,7 +357,7 @@ function PerfilPaciente() {
 
                     <img
                       src={fotoPrevisualizacao}
-                      alt="Pré-visualização da fotografia"
+                      alt="PrÃ©-visualizaÃ§Ã£o da fotografia"
                       className="
                         w-32 h-32
                         rounded-full
@@ -445,11 +422,11 @@ function PerfilPaciente() {
 
               ) : (
 
-                paciente.foto ? (
+                usuario.foto ? (
 
                   <img
-                    src={paciente.foto}
-                    alt={`Fotografia de ${paciente.nome}`}
+                    src={usuario.foto}
+                    alt={`Fotografia de ${usuario.nome}`}
                     className="
                       w-32 h-32
                       rounded-full
@@ -484,12 +461,12 @@ function PerfilPaciente() {
             </div>
 
 
-            {/* IDENTIFICAÇÃO */}
+            {/* IDENTIFICAÃ‡ÃƒO */}
 
             <div className="text-center sm:text-left">
 
               <h2 className="text-2xl font-bold text-texto">
-                {paciente.nome}
+                {usuario.nome}
               </h2>
 
               <p className="text-texto-secundario mt-1">
@@ -498,11 +475,11 @@ function PerfilPaciente() {
 
               <p className="text-sm text-texto-secundario mt-3">
                 Membro desde{" "}
-                {paciente.criadoEm
+                {usuario.criadoEm
                   ? new Date(
-                      paciente.criadoEm
+                      usuario.criadoEm
                     ).toLocaleDateString("pt-PT")
-                  : "—"
+                  : "â€”"
                 }
               </p>
 
@@ -514,7 +491,7 @@ function PerfilPaciente() {
 
 
         {/* 
-            CONTEÚDO
+            CONTEÃšDO
         = */}
 
         <div className="p-6 sm:p-8">
@@ -528,7 +505,7 @@ function PerfilPaciente() {
               </h3>
 
               <p className="text-sm text-texto-secundario mt-1">
-                Informações associadas à sua conta.
+                Informações associadas a sua conta.
               </p>
 
 
@@ -544,7 +521,7 @@ function PerfilPaciente() {
                   </p>
 
                   <p className="font-semibold text-texto mt-1">
-                    {paciente.nome || "—"}
+                    {usuario.nome || "â€”"}
                   </p>
 
                 </div>
@@ -559,7 +536,7 @@ function PerfilPaciente() {
                   </p>
 
                   <p className="font-semibold text-texto mt-1 break-all">
-                    {paciente.email || "—"}
+                    {usuario.email || "â€”"}
                   </p>
 
                 </div>
@@ -574,7 +551,7 @@ function PerfilPaciente() {
                   </p>
 
                   <p className="font-semibold text-texto mt-1">
-                    {paciente.telefone || "—"}
+                    {usuario.telefone || "â€”"}
                   </p>
 
                 </div>
@@ -597,7 +574,7 @@ function PerfilPaciente() {
               </div>
 
 
-              {/* ACÇÕES */}
+              {/* ACÃ‡Ã•ES */}
 
               <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-borda">
 
@@ -649,7 +626,7 @@ function PerfilPaciente() {
 
 
             /* =================================
-               FORMULÁRIO DE EDIÇÃO
+               FORMULÃRIO DE EDIÃ‡ÃƒO
             ================================== */
 
             <form
@@ -729,7 +706,7 @@ function PerfilPaciente() {
                   <input
                     id="email"
                     type="email"
-                    value={paciente.email || ""}
+                    value={usuario.email || ""}
                     disabled
                     className="
                       w-full
@@ -743,7 +720,7 @@ function PerfilPaciente() {
                   />
 
                   <p className="text-xs text-texto-secundario mt-2">
-                    O email não pode ser alterado nesta área.
+                    O email nÃ£o pode ser alterado nesta Ã¡rea.
                   </p>
 
                 </div>
@@ -794,7 +771,7 @@ function PerfilPaciente() {
               </div>
 
 
-              {/* BOTÕES */}
+              {/* BOTÃ•ES */}
 
               <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-borda">
 
@@ -820,7 +797,7 @@ function PerfilPaciente() {
                 >
                   {guardando
                     ? "A guardar..."
-                    : "Guardar alterações"
+                    : "Guardar alteraÃ§Ãµes"
                   }
                 </button>
 
@@ -861,3 +838,5 @@ function PerfilPaciente() {
 }
 
 export default PerfilPaciente
+
+

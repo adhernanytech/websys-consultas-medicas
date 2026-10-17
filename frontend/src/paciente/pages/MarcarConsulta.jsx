@@ -44,7 +44,7 @@ export default function MarcarConsulta() {
     ) {
       setDisponibilidadeId("");
     }
-  }, [disponibilidades, disponibilidadeId]);
+  }, [disponibilidades]);
 
   if (!medico) {
     return (
@@ -65,69 +65,82 @@ export default function MarcarConsulta() {
   }
 
   function submeterFormulario(event) {
-    event.preventDefault();
-    setErro("");
-    setMensagem("");
+  event.preventDefault();
 
-    const paciente = obterUsuarioAutenticado();
+  setErro("");
+  setMensagem("");
 
-    if (!paciente) {
-      navigate("/login", {
-        state: { from: location.pathname },
-      });
-      return;
-    }
+  const paciente = obterUsuarioAutenticado();
 
-    if (
-      paciente.tipo !== "paciente" &&
-      paciente.role !== "paciente"
-    ) {
-      setErro("Só uma conta de paciente pode marcar consultas.");
-      return;
-    }
-
-    if (!disponibilidadeId) {
-      setErro("Seleccione uma data e um horário.");
-      return;
-    }
-
-    if (motivo.trim().length < 10) {
-      setErro("Descreva o motivo da consulta com pelo menos 10 caracteres.");
-      return;
-    }
-
-    setAGuardar(true);
-
-    try {
-      criarConsulta({
-        pacienteId: paciente.id,
-        pacienteNome: paciente.nome,
-        pacienteEmail: paciente.email,
-        medicoNome: medico.nome,
-        especialidade: medico.especialidade,
-        disponibilidadeId,
-        motivo,
-      });
-
-      setMensagem("Consulta marcada com sucesso!");
-      setMotivo("");
-      setDisponibilidadeId("");
-      setAtualizacao((valor) => valor + 1);
-
-      window.setTimeout(() => {
-        navigate(
-          location.pathname.startsWith("/paciente")
-            ? "/paciente/minhas-consultas"
-            : "/"
-        );
-      }, 1000);
-    } catch (error) {
-      setErro(error.message || "Não foi possível marcar a consulta.");
-      setAtualizacao((valor) => valor + 1);
-    } finally {
-      setAGuardar(false);
-    }
+  if (!paciente) {
+    navigate("/login", {
+      state: { from: location.pathname },
+    });
+    return;
   }
+
+  if (
+    paciente.tipo !== "paciente" &&
+    paciente.role !== "paciente"
+  ) {
+    setErro("Só uma conta de paciente pode marcar consultas.");
+    return;
+  }
+
+  if (!disponibilidadeId) {
+    setErro("Seleccione uma data e um horário.");
+    return;
+  }
+
+  if (motivo.trim().length < 10) {
+    setErro(
+      "Descreva o motivo da consulta com pelo menos 10 caracteres."
+    );
+    return;
+  }
+
+  setAGuardar(true);
+
+  try {
+    criarConsulta({
+      pacienteId: paciente.id,
+      pacienteNome: paciente.nome,
+      pacienteEmail: paciente.email,
+
+      // IMPORTANTE: estava a faltar
+      medicoId: medico.id,
+      medicoNome: medico.nome,
+      especialidade: medico.especialidade,
+
+      disponibilidadeId,
+      motivo,
+    });
+
+    setMensagem("Consulta marcada com sucesso!");
+
+    setMotivo("");
+    setDisponibilidadeId("");
+
+    setAtualizacao((valor) => valor + 1);
+
+    window.setTimeout(() => {
+      navigate(
+        location.pathname.startsWith("/paciente")
+          ? "/paciente/minhas-consultas"
+          : "/"
+      );
+    }, 1000);
+  } catch (error) {
+    setErro(
+      error.message ||
+        "Não foi possível marcar a consulta."
+    );
+
+    setAtualizacao((valor) => valor + 1);
+  } finally {
+    setAGuardar(false);
+  }
+}
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">

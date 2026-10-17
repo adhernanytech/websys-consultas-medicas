@@ -1,628 +1,230 @@
-import { useEffect, useState } from "react"
-import {
-  Link,
-  useNavigate,
-  useParams
-} from "react-router-dom"
+﻿import { useNavigate, useParams, Link } from "react-router-dom"
 
-import {
-  obterConsultaPorId,
-  cancelarConsulta,
-  editarConsulta
-} from "../../utils/consultas"
+import { obterConsultaPorId, cancelarConsulta } from "../../data/consultas"
+import { obterUsuarioAutenticado } from "../../data/usuarios"
+import { obterRegistoClinicoPorConsulta } from "../../data/registrosClinicos"
+import { useStorageSync } from "../../hooks/useStorageSync"
 
-
-function DetalhesConsulta() {
+export default function DetalhesConsulta() {
   const { id } = useParams()
-
   const navegar = useNavigate()
 
-  const [consulta, setConsulta] = useState(null)
-  const [carregando, setCarregando] = useState(true)
+  // Forçar re-render quando consultas ou registos mudam
+  useStorageSync("consultas")
+  useStorageSync("registosClinicos")
 
-  const [editando, setEditando] = useState(false)
+  const usuario = obterUsuarioAutenticado()
 
-  const [formulario, setFormulario] = useState({
-    data: "",
-    horario: "",
-    motivo: ""
-  })
-
-  const [mensagem, setMensagem] = useState("")
-  const [erro, setErro] = useState("")
-
-
-  function obterDataLocal() {
-    const data = new Date()
-
-    const ano = data.getFullYear()
-    const mes = String(data.getMonth() + 1).padStart(2, "0")
-    const dia = String(data.getDate()).padStart(2, "0")
-
-    return `${ano}-${mes}-${dia}`
+  if (!usuario) {
+    navegar("/login")
+    return null
   }
 
-
-  const hoje = obterDataLocal()
-
-
-  useEffect(() => {
-    const consultaEncontrada =
-      obterConsultaPorId(id)
-
-    setConsulta(consultaEncontrada)
-
-    if (consultaEncontrada) {
-      setFormulario({
-        data: consultaEncontrada.data || "",
-        horario:
-          consultaEncontrada.horario ||
-          consultaEncontrada.hora ||
-          "",
-        motivo: consultaEncontrada.motivo || ""
-      })
-    }
-
-    setCarregando(false)
-  }, [id])
-
-
-  function classeEstado(estado) {
-    if (
-      estado === "Confirmada" ||
-      estado === "Agendada"
-    ) {
-      return "bg-green-50 border-green-200 text-sucesso"
-    }
-
-    if (estado === "Concluída") {
-      return "bg-blue-50 border-blue-200 text-blue-700"
-    }
-
-    return "bg-red-50 border-red-200 text-erro"
+  if (usuario.tipo !== "paciente" && usuario.role !== "paciente") {
+    navegar("/")
+    return null
   }
 
-
-  function alterarCampo(evento) {
-    const { name, value } = evento.target
-
-    setFormulario((estadoAnterior) => ({
-      ...estadoAnterior,
-      [name]: value
-    }))
+  if (usuario.ativo === false) {
+    navegar("/login")
+    return null
   }
 
-
-  function iniciarEdicao() {
-    setErro("")
-    setMensagem("")
-
-    setFormulario({
-      data: consulta.data || "",
-      horario:
-        consulta.horario ||
-        consulta.hora ||
-        "",
-      motivo: consulta.motivo || ""
-    })
-
-    setEditando(true)
-  }
-
-
-  function cancelarEdicao() {
-    setErro("")
-    setMensagem("")
-
-    setFormulario({
-      data: consulta.data || "",
-      horario:
-        consulta.horario ||
-        consulta.hora ||
-        "",
-      motivo: consulta.motivo || ""
-    })
-
-    setEditando(false)
-  }
-
-
-  function guardarAlteracoes(evento) {
-    evento.preventDefault()
-
-    setErro("")
-    setMensagem("")
-
-
-    if (!formulario.data) {
-      setErro("Seleccione uma data.")
-      return
-    }
-
-
-    if (formulario.data < hoje) {
-      setErro(
-        "Não pode seleccionar uma data anterior à data actual."
-      )
-      return
-    }
-
-
-    if (!formulario.horario) {
-      setErro("Seleccione um horário.")
-      return
-    }
-
-
-    if (formulario.motivo.trim().length < 10) {
-      setErro(
-        "O motivo deve ter pelo menos 10 caracteres."
-      )
-      return
-    }
-
-
-    const consultaActualizada =
-      editarConsulta(id, {
-        data: formulario.data,
-        horario: formulario.horario,
-        motivo: formulario.motivo
-      })
-
-
-    if (!consultaActualizada) {
-      setErro(
-        "Não foi possível alterar esta consulta."
-      )
-      return
-    }
-
-
-    setConsulta(consultaActualizada)
-
-    setFormulario({
-      data: consultaActualizada.data,
-      horario: consultaActualizada.horario,
-      motivo: consultaActualizada.motivo
-    })
-
-    setEditando(false)
-
-    setMensagem(
-      "Consulta actualizada com sucesso."
-    )
-  }
-
-
-  function cancelar() {
-    const confirmar = window.confirm(
-      "Tem certeza que deseja cancelar esta consulta?"
-    )
-
-    if (!confirmar) {
-      return
-    }
-
-    const consultaActualizada =
-      cancelarConsulta(id)
-
-    setConsulta(consultaActualizada)
-
-    setEditando(false)
-    setMensagem("Consulta cancelada com sucesso.")
-    setErro("")
-  }
-
-
-  if (carregando) {
-    return (
-      <main className="min-h-screen bg-gray-50 px-4 sm:px-6 py-8">
-
-        <div className="max-w-4xl mx-auto">
-
-          <p className="text-texto-secundario">
-            A carregar os detalhes da consulta...
-          </p>
-
-        </div>
-
-      </main>
-    )
-  }
-
+  const consulta = obterConsultaPorId(id)
 
   if (!consulta) {
     return (
-      <main className="min-h-screen bg-gray-50 px-4 sm:px-6 py-8">
-
-        <div className="max-w-4xl mx-auto">
-
-          <section className="bg-white border border-borda rounded-2xl shadow-sm p-8 text-center">
-
-            <h1 className="text-2xl font-bold text-texto">
-              Consulta não encontrada
-            </h1>
-
-            <p className="text-texto-secundario mt-2">
-              A consulta que procura não existe ou já não está disponível.
-            </p>
-
-            <Link
-              to="/paciente/minhas-consultas"
-              className="inline-flex mt-6 bg-primaria text-white px-5 py-3 rounded-lg font-medium hover:bg-primaria-hover transition"
-            >
-              Voltar às minhas consultas
-            </Link>
-
-          </section>
-
-        </div>
-
+      <main className="mx-auto max-w-3xl px-4 py-8">
+        <h1 className="text-2xl font-bold text-texto">Consulta não encontrada</h1>
+        <Link
+          to="/paciente/minhas-consultas"
+          className="mt-4 inline-block rounded-lg bg-primaria px-4 py-2 text-white"
+        >
+          Voltar a minhas consultas
+        </Link>
       </main>
     )
   }
 
+  if (String(consulta.pacienteId) !== String(usuario.id)) {
+    navegar("/")
+    return null
+  }
 
-  const podeGerir =
+  const registo = obterRegistoClinicoPorConsulta(id, consulta.medicoId)
+
+  function tratarCancelamento() {
+    const confirmar = window.confirm(
+      "Tem a certeza de que pretende cancelar esta consulta?"
+    )
+
+    if (!confirmar) return
+
+    try {
+      cancelarConsulta(id, usuario.id)
+      navegar("/paciente/minhas-consultas")
+    } catch (erro) {
+      alert("Erro ao cancelar consulta: " + erro.message)
+    }
+  }
+
+  const podeCancelar =
     consulta.estado === "Agendada" ||
     consulta.estado === "Confirmada"
 
+  const classeEstado = {
+    Agendada: "bg-blue-50 border-blue-200 text-blue-800",
+    Confirmada: "bg-green-50 border-green-200 text-green-800",
+    Realizada: "bg-purple-50 border-purple-200 text-purple-800",
+    Concluída: "bg-cyan-50 border-cyan-200 text-cyan-800",
+    Cancelada: "bg-red-50 border-red-200 text-red-800",
+  }[consulta.estado] || "bg-gray-50 border-gray-200 text-gray-800"
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 sm:px-6 py-8">
-
-      <div className="max-w-4xl mx-auto">
-
-        {/* CABEÇALHO */}
-
-        <section className="mb-8">
-
+    <main className="min-h-screen bg-gray-50">
+      {/* Cabeçalho */}
+      <section className="border-b border-borda bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-8">
           <Link
             to="/paciente/minhas-consultas"
-            className="inline-flex items-center text-sm text-texto-secundario hover:text-texto transition"
+            className="text-sm text-primaria hover:underline"
           >
-            ← Voltar às minhas consultas
+            ← Voltar
           </Link>
 
-          <p className="text-texto-secundario text-sm mt-6">
-            Área do paciente
-          </p>
-
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-1">
-
+          <div className="mt-4 flex items-start justify-between gap-4">
             <div>
-
-              <h1 className="text-3xl sm:text-4xl font-bold text-texto">
-                Detalhes da consulta
-              </h1>
-
-              <p className="text-texto-secundario mt-2">
-                Consulte e gira os dados da sua consulta médica.
+              <h1 className="text-3xl font-bold text-texto">Detalhes da Consulta</h1>
+              <p className="mt-2 text-texto-secundario">
+                Consulta com {consulta.medicoNome || "Médico"}
               </p>
-
             </div>
 
             <span
-              className={`
-                self-start
-                border px-3 py-1 rounded-full
-                text-sm font-medium
-                ${classeEstado(consulta.estado)}
-              `}
+              className={`rounded-full border px-4 py-2 font-semibold ${classeEstado}`}
             >
               {consulta.estado}
             </span>
-
           </div>
+        </div>
+      </section>
 
-        </section>
+      {/* Conteúdo */}
+      <section className="mx-auto max-w-7xl px-6 py-8">
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Informação principal */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Dados da consulta */}
+            <div className="rounded-2xl border border-borda bg-white p-6 shadow-sm">
+              <h2 className="text-xl font-bold text-texto">Informação da Consulta</h2>
 
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-sm font-medium text-texto-secundario">Data</p>
+                  <p className="mt-1 text-lg text-texto">
+                    {new Date(`${consulta.data}T12:00:00`).toLocaleDateString(
+                      "pt-PT",
+                      { weekday: "long", day: "numeric", month: "long", year: "numeric" }
+                    )}
+                  </p>
+                </div>
 
-        {/* MÉDICO */}
+                <div>
+                  <p className="text-sm font-medium text-texto-secundario">Horário</p>
+                  <p className="mt-1 text-lg text-texto">{consulta.horario}</p>
+                </div>
 
-        <section className="bg-white border border-borda rounded-2xl shadow-sm p-6">
-
-          <h2 className="text-xl font-bold text-texto">
-            Médico
-          </h2>
-
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-
-            <div>
-
-              <p className="text-sm text-texto-secundario">
-                Nome
-              </p>
-
-              <p className="font-semibold text-texto mt-1">
-                {consulta.medicoNome || consulta.medico}
-              </p>
-
+                <div className="sm:col-span-2">
+                  <p className="text-sm font-medium text-texto-secundario">Motivo</p>
+                  <p className="mt-1 whitespace-pre-line text-texto">{consulta.motivo}</p>
+                </div>
+              </div>
             </div>
 
+            {/* Registo clínico */}
+            {(consulta.estado === "Realizada" || consulta.estado === "Concluída") && (
+              <div className="rounded-2xl border border-borda bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-texto">Registo Clínico</h2>
 
-            <div>
+                {registo ? (
+                  <div className="mt-4 space-y-4">
+                    {registo.queixa && (
+                      <div>
+                        <h3 className="font-semibold text-texto">Queixa</h3>
+                        <p className="mt-1 text-texto-secundario">{registo.queixa}</p>
+                      </div>
+                    )}
 
-              <p className="text-sm text-texto-secundario">
-                Especialidade
-              </p>
+                    {registo.observacoes && (
+                      <div>
+                        <h3 className="font-semibold text-texto">Observações</h3>
+                        <p className="mt-1 text-texto-secundario">{registo.observacoes}</p>
+                      </div>
+                    )}
 
-              <p className="font-semibold text-texto mt-1">
-                {consulta.especialidade}
-              </p>
+                    {registo.diagnostico && (
+                      <div>
+                        <h3 className="font-semibold text-texto">Diagnóstico</h3>
+                        <p className="mt-1 text-texto-secundario">{registo.diagnostico}</p>
+                      </div>
+                    )}
 
-            </div>
-
-
-            {consulta.medicoId && (
-              <div>
-
-                <p className="text-sm text-texto-secundario">
-                  Código do médico
-                </p>
-
-                <p className="font-semibold text-texto mt-1">
-                  {consulta.medicoId}
-                </p>
-
+                    {registo.tratamento && (
+                      <div>
+                        <h3 className="font-semibold text-texto">Tratamento</h3>
+                        <p className="mt-1 whitespace-pre-line text-texto-secundario">
+                          {registo.tratamento}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-4 text-texto-secundario">
+                    O médico ainda não adicionou um registo clínico para esta consulta.
+                  </p>
+                )}
               </div>
             )}
 
+            {consulta.estado === "Cancelada" && (
+              <div className="rounded-2xl border-l-4 border-red-400 bg-red-50 p-6">
+                <p className="text-red-700">Esta consulta foi cancelada.</p>
+              </div>
+            )}
           </div>
 
-        </section>
+          {/* Sidebar com ações */}
+          <div className="rounded-2xl border border-borda bg-white p-6 shadow-sm h-fit">
+            <h3 className="font-bold text-texto">Ações</h3>
 
+            <div className="mt-4 space-y-2">
+              <Link
+                to="/paciente/historico-clinico"
+                className="block w-full rounded-lg bg-primaria/10 px-4 py-2 text-center font-medium text-primaria hover:bg-primaria/20 transition"
+              >
+                Ver histórico clínico
+              </Link>
 
-        {/* DADOS / EDIÇÃO */}
-
-        <section className="bg-white border border-borda rounded-2xl shadow-sm p-6 mt-6">
-
-          {editando ? (
-
-            <form onSubmit={guardarAlteracoes}>
-
-              <h2 className="text-xl font-bold text-texto">
-                Alterar consulta
-              </h2>
-
-              <p className="text-sm text-texto-secundario mt-1">
-                Altere os dados necessários e guarde as alterações.
-              </p>
-
-
-              {/* DATA */}
-
-              <div className="mt-6">
-
-                <label
-                  htmlFor="data"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Data da consulta
-                </label>
-
-                <input
-                  id="data"
-                  type="date"
-                  name="data"
-                  value={formulario.data}
-                  onChange={alterarCampo}
-                  min={hoje}
-                  required
-                  className="mt-2 w-full border border-gray-300 rounded-lg px-4 py-3"
-                />
-
-              </div>
-
-
-              {/* HORÁRIO */}
-
-              <div className="mt-6">
-
-                <label
-                  htmlFor="horario"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Horário da consulta
-                </label>
-
-                <input
-                  id="horario"
-                  type="time"
-                  name="horario"
-                  value={formulario.horario}
-                  onChange={alterarCampo}
-                  required
-                  className="mt-2 w-full border border-gray-300 rounded-lg px-4 py-3"
-                />
-
-              </div>
-
-
-              {/* MOTIVO */}
-
-              <div className="mt-6">
-
-                <label
-                  htmlFor="motivo"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Motivo da consulta
-                </label>
-
-                <textarea
-                  id="motivo"
-                  name="motivo"
-                  value={formulario.motivo}
-                  onChange={alterarCampo}
-                  rows="4"
-                  minLength="10"
-                  required
-                  className="mt-2 w-full border border-gray-300 rounded-lg px-4 py-3"
-                />
-
-              </div>
-
-
-              {/* MENSAGENS */}
-
-              {erro && (
-                <p className="mt-4 text-sm text-erro">
-                  {erro}
-                </p>
-              )}
-
-
-              {mensagem && (
-                <p className="mt-4 text-sm text-sucesso">
-                  {mensagem}
-                </p>
-              )}
-
-
-              {/* BOTÕES */}
-
-              <div className="flex flex-col sm:flex-row gap-3 mt-6">
-
-                <button
-                  type="submit"
-                  className="bg-primaria text-white px-5 py-3 rounded-lg font-medium hover:bg-primaria-hover transition cursor-pointer"
-                >
-                  Guardar alterações
-                </button>
-
+              {podeCancelar && (
                 <button
                   type="button"
-                  onClick={cancelarEdicao}
-                  className="border border-borda text-texto px-5 py-3 rounded-lg font-medium hover:bg-gray-50 transition cursor-pointer"
-                >
-                  Cancelar edição
-                </button>
-
-              </div>
-
-            </form>
-
-          ) : (
-
-            <>
-
-              <h2 className="text-xl font-bold text-texto">
-                Dados da consulta
-              </h2>
-
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
-
-                <div>
-
-                  <p className="text-sm text-texto-secundario">
-                    Data
-                  </p>
-
-                  <p className="font-semibold text-texto mt-1">
-                    {consulta.data}
-                  </p>
-
-                </div>
-
-
-                <div>
-
-                  <p className="text-sm text-texto-secundario">
-                    Horário
-                  </p>
-
-                  <p className="font-semibold text-texto mt-1">
-                    {consulta.horario || consulta.hora}
-                  </p>
-
-                </div>
-
-
-                <div className="sm:col-span-2">
-
-                  <p className="text-sm text-texto-secundario">
-                    Motivo da consulta
-                  </p>
-
-                  <p className="text-texto mt-1">
-                    {consulta.motivo || "Nenhum motivo informado."}
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              {mensagem && (
-                <p className="mt-5 text-sm text-sucesso">
-                  {mensagem}
-                </p>
-              )}
-
-            </>
-
-          )}
-
-        </section>
-
-
-        {/* GESTÃO */}
-
-        {!editando && (
-          <section className="bg-white border border-borda rounded-2xl shadow-sm p-6 mt-6">
-
-            <h2 className="text-xl font-bold text-texto">
-              Gestão da consulta
-            </h2>
-
-            <p className="text-sm text-texto-secundario mt-1">
-              Acções disponíveis para esta consulta.
-            </p>
-
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-6">
-
-              {podeGerir && (
-                <button
-                  type="button"
-                  onClick={iniciarEdicao}
-                  className="bg-primaria text-white px-5 py-3 rounded-lg font-medium hover:bg-primaria-hover transition cursor-pointer"
-                >
-                  Editar consulta
-                </button>
-              )}
-
-
-              {podeGerir && (
-                <button
-                  type="button"
-                  onClick={cancelar}
-                  className="border border-erro text-erro px-5 py-3 rounded-lg font-medium hover:bg-red-50 transition cursor-pointer"
+                  onClick={tratarCancelamento}
+                  className="w-full rounded-lg border border-red-300 px-4 py-2 font-medium text-red-700 hover:bg-red-50 transition"
                 >
                   Cancelar consulta
                 </button>
               )}
 
-
               <Link
                 to="/paciente/minhas-consultas"
-                className="border border-borda text-texto px-5 py-3 rounded-lg font-medium hover:bg-gray-50 transition text-center"
+                className="block w-full rounded-lg bg-gray-100 px-4 py-2 text-center font-medium text-texto hover:bg-gray-200 transition"
               >
-                Voltar às consultas
+                Voltar a minhas consultas
               </Link>
-
             </div>
-
-          </section>
-        )}
-
-      </div>
-
+          </div>
+        </div>
+      </section>
     </main>
   )
 }
-
-
-export default DetalhesConsulta

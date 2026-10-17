@@ -1,14 +1,13 @@
-
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom"
 
 import {
   obterUsuarioAutenticado,
   usuarioIsAdmin,
-} from "../../data/usuarios";
+} from "../../data/usuarios"
 
 function RotaAdminProtegida() {
-  const location = useLocation();
-  const usuario = obterUsuarioAutenticado();
+  const location = useLocation()
+  const usuario = obterUsuarioAutenticado()
 
   if (!usuario) {
     return (
@@ -17,18 +16,18 @@ function RotaAdminProtegida() {
         replace
         state={{ from: location }}
       />
-    );
+    )
   }
 
   if (!usuarioIsAdmin(usuario)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" replace />
   }
 
   if (usuario.ativo === false) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace />
   }
 
-  return <Outlet />;
+  return <Outlet />
 }
 
-export default RotaAdminProtegida;
+export default RotaAdminProtegida
