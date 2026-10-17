@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { GoogleLogin } from '@react-oauth/google';
+// import { GoogleLogin } from '@react-oauth/google';
 
 
 
@@ -428,6 +428,7 @@ function Login() {
               </div>
 
               <div className="mt-6 flex justify-center">
+                { /*
                 <GoogleLogin
                   onSuccess={(credentialResponse) => {
                     console.log("Token do Google recebido:", credentialResponse.credential);
@@ -438,6 +439,7 @@ function Login() {
                   }}
                   useOneTap
                 />
+                */}
               </div>
             </div>
           </form>
