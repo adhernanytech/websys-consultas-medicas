@@ -165,6 +165,23 @@ function DashboardAdmin() {
 
         </div>
 
+        <section className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { to: "/admin/contas-medicas", titulo: "Contas médicas", descricao: "Criar contas médicas com perfil e fotografia obrigatória." },
+            { to: "/admin/contas-utilizadores", titulo: "Contas de utilizadores", descricao: "Consultar e gerir acessos de todos os perfis." },
+            { to: "/admin/consultas", titulo: "Gerir consultas", descricao: "Pesquisar, confirmar e cancelar marcações." },
+            { to: "/admin/relatorios", titulo: "Relatórios", descricao: "Indicadores e exportações CSV/PDF." },
+            { to: "/admin/actividade", titulo: "Actividade", descricao: "Consultar as operações administrativas registadas." },
+            { to: "/admin/configuracoes", titulo: "Configurações", descricao: "Parâmetros gerais e regras da clínica." },
+            { to: "/admin/especialidades", titulo: "Especialidades", descricao: "Manter o catálogo de especialidades." },
+          ].map((item) => (
+            <Link key={item.to} to={item.to} className="group rounded-xl border border-gray-200 bg-white p-4 transition hover:border-blue-300 hover:shadow-sm">
+              <p className="font-semibold text-gray-900 group-hover:text-primaria">{item.titulo}</p>
+              <p className="mt-1 text-sm leading-5 text-gray-500">{item.descricao}</p>
+            </Link>
+          ))}
+        </section>
+
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
           <CartaoEstatistica
@@ -407,7 +424,7 @@ function DashboardAdmin() {
             </p>
 
             <p className="mt-1 text-sm text-gray-500">
-              Criar e associar contas.
+              Criar contas médicas directamente pelo formulário administrativo.
             </p>
           </Link>
 

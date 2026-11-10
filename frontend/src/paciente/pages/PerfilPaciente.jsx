@@ -1,3 +1,4 @@
+import { registarAccaoUtilizador } from "../../data/auditoriaAdmin";
 ﻿import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
@@ -217,7 +218,7 @@ function PerfilPaciente() {
       }
 
 
-      setPaciente(usuarioAtualizado)
+      registarAccaoUtilizador("Perfil actualizado", "perfil de paciente", `Dados de perfil actualizados para o utilizador ID ${usuarioAtualizado.id}`)
 
       setFormulario({
         nome: usuarioAtualizado.nome || "",

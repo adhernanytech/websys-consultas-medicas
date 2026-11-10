@@ -4,7 +4,7 @@ import {
 
 import {
   obterDisponibilidadePorData
-} from "../data/disponibilidade"
+} from "../data/disponibilidades"
 
 import {
   gerarHorarios

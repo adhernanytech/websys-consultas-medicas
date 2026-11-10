@@ -1,3 +1,4 @@
+import { registarAccaoUtilizador } from "../data/auditoriaAdmin";
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 
@@ -8,6 +9,7 @@ import {
 } from "../data/usuarios";
 
 import { prepararImagem } from "../utils/imagem"
+import AppIcon from "../components/ui/AppIcon"
 
 function Registro() {
 
@@ -240,6 +242,7 @@ function Registro() {
       });
 
       guardarUsuarioAutenticado(novoUsuario);
+      registarAccaoUtilizador("Conta criada", "conta de paciente", `Registo público concluído; utilizador ID ${novoUsuario.id}`);
 
       setMensagem("Conta criada com sucesso!");
       setTipoMensagem("sucesso");
@@ -282,9 +285,9 @@ function Registro() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center px-6 py-12">
+    <main className="min-h-screen bg-fundo flex items-center justify-center px-5 py-12 sm:px-6">
 
-      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl p-8 sm:p-10">
+      <div className="w-full max-w-2xl border border-borda bg-white rounded-3xl shadow-xl shadow-slate-900/5 p-6 sm:p-10">
 
         {/* Cabeçalho */}
 
@@ -292,13 +295,11 @@ function Registro() {
 
           <div className="mx-auto w-14 h-14 bg-primaria/10 rounded-2xl flex items-center justify-center">
 
-            <span className="text-primaria font-bold text-xl">
-              M
-            </span>
+            <AppIcon name="clinic" size={26} className="text-primaria" />
 
           </div>
 
-          <h1 className="text-3xl font-bold text-texto mt-5">
+          <h1 className="text-3xl font-bold tracking-tight text-texto mt-5">
             Criar uma conta
           </h1>
 

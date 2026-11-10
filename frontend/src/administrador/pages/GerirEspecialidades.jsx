@@ -6,7 +6,9 @@ import {
   criarEspecialidade,
   actualizarEspecialidade,
   actualizarEstadoEspecialidade,
+  eliminarEspecialidade,
 } from "../../data/especialidades"
+import AppIcon from "../../components/ui/AppIcon"
 
 const formularioInicial = {
   nome: "",
@@ -37,6 +39,7 @@ function GerirEspecialidades() {
     event.preventDefault()
     limparMensagens()
 
+    if (!window.confirm(editandoId !== null ? "Confirma que pretende guardar as alterações desta especialidade?" : "Confirma a criação desta especialidade?")) return
     try {
       if (editandoId !== null) {
         actualizarEspecialidade(editandoId, formulario)
@@ -67,12 +70,15 @@ function GerirEspecialidades() {
   }
 
   function cancelarEdicao() {
+    if (!window.confirm("Cancelar a edição? As alterações não guardadas serão perdidas.")) return
     setEditandoId(null)
     setFormulario(formularioInicial)
     limparMensagens()
   }
 
   function alterarEstado(especialidade) {
+    const acao = especialidade.ativo === false ? "activar" : "desactivar"
+    if (!window.confirm(`Confirma que pretende ${acao} a especialidade ${especialidade.nome}?`)) return
     limparMensagens()
 
     try {
@@ -94,6 +100,12 @@ function GerirEspecialidades() {
           "Não foi possível alterar o estado."
       )
     }
+  }
+
+  function eliminar(especialidade) {
+    if (!window.confirm(`Eliminar definitivamente a especialidade ${especialidade.nome}? Esta operação não pode ser anulada.`)) return
+    try { eliminarEspecialidade(especialidade.id); setMensagem("Especialidade eliminada."); setErro(""); recarregar() }
+    catch (error) { setErro(error?.message || "Não foi possível eliminar a especialidade."); setMensagem("") }
   }
 
   return (
@@ -274,6 +286,7 @@ function GerirEspecialidades() {
                         ? "Activar"
                         : "Desactivar"}
                     </button>
+                    <button type="button" onClick={() => eliminar(especialidade)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"><AppIcon name="trash" size={14}/> Eliminar</button>
                   </div>
                 </div>
               ))

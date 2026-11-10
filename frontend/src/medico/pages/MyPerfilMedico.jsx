@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { prepararImagem } from "../../utils/imagem"
+import { registarAccaoUtilizador } from "../../data/auditoriaAdmin"
 
 import {
   obterUsuarioAutenticado,
@@ -85,6 +86,7 @@ function PerfilMedico() {
         formulario
       )
       setMedicoActualizado(actualizado)
+      registarAccaoUtilizador("Perfil profissional actualizado", "perfil médico", `Médico ID ${actualizado.id}; dados profissionais, contactos ou fotografia actualizados`)
       setModoEdicao(false)
       setSucesso("Perfil actualizado com sucesso.")
     } catch (error) {

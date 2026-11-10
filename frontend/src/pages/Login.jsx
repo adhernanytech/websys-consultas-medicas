@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-// import { GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 
 
 
@@ -11,6 +11,7 @@ import {
 } from "../data/usuarios";
 
 import { obterMedicoDaConta } from "../data/medicos";
+import { registarAccaoUtilizador } from "../data/auditoriaAdmin";
 
 function Login() {
   const navegar = useNavigate();
@@ -110,6 +111,7 @@ function Login() {
         role: tipo,
         tipo,
       });
+      registarAccaoUtilizador("Início de sessão", "autenticação", `Sessão iniciada com sucesso; perfil: ${tipo}`);
 
       // A primeira palavra-passe é temporária.
       // O médico deve alterá-la antes de aceder à área médica.
@@ -216,7 +218,7 @@ function Login() {
               </div>
 
               <div>
-                <p className="font-bold">Sistema Médico</p>
+                <p className="font-bold">Wenji Maka</p>
                 <p className="text-blue-100 text-xs">
                   Marcação de consultas online
                 </p>
@@ -428,7 +430,6 @@ function Login() {
               </div>
 
               <div className="mt-6 flex justify-center">
-                { /*
                 <GoogleLogin
                   onSuccess={(credentialResponse) => {
                     console.log("Token do Google recebido:", credentialResponse.credential);
@@ -439,7 +440,6 @@ function Login() {
                   }}
                   useOneTap
                 />
-                */}
               </div>
             </div>
           </form>

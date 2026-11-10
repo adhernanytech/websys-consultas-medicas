@@ -1,6 +1,9 @@
-﻿import { useNavigate, useParams, Link } from "react-router-dom"
+import { useNavigate, useParams, Link } from "react-router-dom"
+import { useState } from "react"
 
-import { obterConsultaPorId, cancelarConsulta } from "../../data/consultas"
+import { obterConsultaPorId, cancelarConsulta, editarConsulta } from "../../data/consultas"
+import { obterDisponibilidadesDoMedico } from "../../data/disponibilidades"
+import AppIcon from "../../components/ui/AppIcon"
 import { obterUsuarioAutenticado } from "../../data/usuarios"
 import { obterRegistoClinicoPorConsulta } from "../../data/registrosClinicos"
 import { useStorageSync } from "../../hooks/useStorageSync"
@@ -8,6 +11,11 @@ import { useStorageSync } from "../../hooks/useStorageSync"
 export default function DetalhesConsulta() {
   const { id } = useParams()
   const navegar = useNavigate()
+  const [mostrarReagendamento, setMostrarReagendamento] = useState(false)
+  const [novaDisponibilidadeId, setNovaDisponibilidadeId] = useState("")
+  const [mensagem, setMensagem] = useState("")
+  const [erroAcao, setErroAcao] = useState("")
+  const [, forcarActualizacao] = useState(0)
 
   // Forçar re-render quando consultas ou registos mudam
   useStorageSync("consultas")
@@ -62,15 +70,38 @@ export default function DetalhesConsulta() {
 
     try {
       cancelarConsulta(id, usuario.id)
-      navegar("/paciente/minhas-consultas")
+      setMensagem("A consulta foi cancelada com sucesso.")
+      setErroAcao("")
+      forcarActualizacao((v) => v + 1)
     } catch (erro) {
-      alert("Erro ao cancelar consulta: " + erro.message)
+      setErroAcao(erro.message || "Erro ao cancelar consulta.")
     }
   }
 
   const podeCancelar =
     consulta.estado === "Agendada" ||
     consulta.estado === "Confirmada"
+  const podeReagendar = consulta.estado === "Agendada"
+  const disponibilidades = podeReagendar ? obterDisponibilidadesDoMedico(consulta.medicoId) : []
+
+  function submeterReagendamento(evento) {
+    evento.preventDefault()
+    if (!novaDisponibilidadeId) {
+      setErroAcao("Seleccione um novo horário disponível.")
+      return
+    }
+    if (!window.confirm("Confirma que pretende reagendar esta consulta para o novo horário?")) return
+    try {
+      editarConsulta(id, usuario.id, { disponibilidadeId: novaDisponibilidadeId, motivo: consulta.motivo })
+      setMensagem("A consulta foi reagendada com sucesso.")
+      setErroAcao("")
+      setMostrarReagendamento(false)
+      setNovaDisponibilidadeId("")
+      forcarActualizacao((v) => v + 1)
+    } catch (erro) {
+      setErroAcao(erro.message || "Não foi possível reagendar a consulta.")
+    }
+  }
 
   const classeEstado = {
     Agendada: "bg-blue-50 border-blue-200 text-blue-800",
@@ -111,6 +142,8 @@ export default function DetalhesConsulta() {
 
       {/* Conteúdo */}
       <section className="mx-auto max-w-7xl px-6 py-8">
+        {mensagem && <div role="status" className="mb-5 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">{mensagem}</div>}
+        {erroAcao && <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{erroAcao}</div>}
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Informação principal */}
           <div className="lg:col-span-2 space-y-6">
@@ -205,6 +238,12 @@ export default function DetalhesConsulta() {
                 Ver histórico clínico
               </Link>
 
+              {podeReagendar && (
+                <button type="button" onClick={() => setMostrarReagendamento((valor) => !valor)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-blue-200 px-4 py-2 font-medium text-blue-800 transition hover:bg-blue-50">
+                  <AppIcon name="calendar" size={16}/>{mostrarReagendamento ? "Fechar reagendamento" : "Reagendar consulta"}
+                </button>
+              )}
+
               {podeCancelar && (
                 <button
                   type="button"
@@ -222,6 +261,18 @@ export default function DetalhesConsulta() {
                 Voltar a minhas consultas
               </Link>
             </div>
+            {mostrarReagendamento && podeReagendar && <form onSubmit={submeterReagendamento} className="mt-5 border-t border-gray-100 pt-5">
+              <h4 className="font-semibold text-gray-900">Escolher novo horário</h4>
+              <p className="mt-1 text-xs leading-5 text-gray-500">Só pode reagendar uma consulta ainda agendada. O novo horário tem de pertencer ao mesmo médico.</p>
+              {disponibilidades.length === 0 ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Este médico não tem outros horários disponíveis neste momento.</p> : <>
+                <label htmlFor="novo-horario-consulta" className="mt-3 block text-sm font-medium text-gray-700">Disponibilidade</label>
+                <select id="novo-horario-consulta" value={novaDisponibilidadeId} onChange={(e) => setNovaDisponibilidadeId(e.target.value)} required className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm">
+                  <option value="">Seleccione uma data e hora</option>
+                  {disponibilidades.map((item) => <option key={item.id} value={item.id}>{new Date(`${item.data}T12:00:00`).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })} · {item.horaInicio}–{item.horaFim}</option>)}
+                </select>
+                <button type="submit" className="mt-3 w-full rounded-lg bg-primaria px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90">Confirmar reagendamento</button>
+              </>}
+            </form>}
           </div>
         </div>
       </section>

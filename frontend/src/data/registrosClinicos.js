@@ -1,4 +1,5 @@
 import { obterConsultasDoMedico } from "./consultas"
+import { registarAccaoUtilizador } from "./auditoriaAdmin"
 
 const CHAVE_REGISTOS_CLINICOS = "registosClinicos"
 
@@ -175,6 +176,7 @@ export function guardarRegistoClinico({
   }
 
   guardarRegistosClinicos(registos)
+  registarAccaoUtilizador(indice !== -1 ? "Registo clínico actualizado" : "Registo clínico criado", "registo clínico", `Consulta ID ${consultaId}; paciente ID ${pacienteId}; médico ID ${medicoId}`)
 
   return registo
 }

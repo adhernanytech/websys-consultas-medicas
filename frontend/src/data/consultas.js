@@ -2,6 +2,7 @@ import {
   obterDisponibilidades,
   guardarDisponibilidades,
 } from "./disponibilidades"
+import { registarAccaoUtilizador } from "./auditoriaAdmin"
 
 const CHAVE_CONSULTAS = "consultas"
 
@@ -338,6 +339,7 @@ export function criarConsulta({
     )
   }
 
+  registarAccaoUtilizador("Consulta criada", "consulta", `Consulta ID ${novaConsulta.id}; médico ID ${medicoId}; paciente ID ${pacienteId}; data ${data} ${horario}`)
   return novaConsulta
 }
 
@@ -556,6 +558,7 @@ export function editarConsulta(
   }
 
   guardarConsultas(consultas)
+  registarAccaoUtilizador("Consulta editada/reagendada", "consulta", `Consulta ID ${consultas[indice].id}; paciente ID ${pacienteId}`)
 
   return consultas[indice]
 }
@@ -609,6 +612,7 @@ export function cancelarConsulta(
   libertarDisponibilidade(
     consulta.disponibilidadeId
   )
+  registarAccaoUtilizador("Consulta cancelada", "consulta", `Consulta ID ${consulta.id}; cancelada pelo paciente ID ${pacienteId}`)
 
   return consultas[indice]
 }
@@ -662,6 +666,7 @@ export function cancelarConsultaPeloMedico(
   libertarDisponibilidade(
     consulta.disponibilidadeId
   )
+  registarAccaoUtilizador("Consulta cancelada", "consulta", `Consulta ID ${consulta.id}; cancelada pelo médico ID ${medicoId}`)
 
   return consultas[indice]
 }
@@ -704,6 +709,7 @@ export function confirmarConsultaPeloMedico(
   }
 
   guardarConsultas(consultas)
+  registarAccaoUtilizador("Consulta confirmada", "consulta", `Consulta ID ${consulta.id}; médico ID ${medicoId}`)
 
   return consultas[indice]
 }
@@ -762,6 +768,7 @@ export function marcarConsultaComoRealizada(
   }
 
   guardarConsultas(consultas)
+  registarAccaoUtilizador("Consulta marcada como realizada", "consulta", `Consulta ID ${consulta.id}; médico ID ${medicoId}`)
 
   return consultas[indice]
 }

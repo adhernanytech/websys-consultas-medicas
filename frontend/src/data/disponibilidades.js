@@ -1,4 +1,6 @@
 
+import { registarAccaoUtilizador } from "./auditoriaAdmin"
+
 const CHAVE_DISPONIBILIDADES = "disponibilidades";
 
 function dataLocalISO(data = new Date()) {
@@ -38,6 +40,13 @@ export function guardarDisponibilidades(disponibilidades) {
     CHAVE_DISPONIBILIDADES,
     JSON.stringify(disponibilidades)
   );
+}
+
+export function obterDisponibilidadePorData(medicoId, data) {
+  return obterDisponibilidades().filter((item) =>
+    String(item.medicoId ?? item.medico_id ?? "") === String(medicoId) &&
+    String(item.data || "") === String(data || "")
+  )
 }
 
 export function obterDisponibilidadePorId(id) {
@@ -188,6 +197,7 @@ export function adicionarDisponibilidade(dados) {
     ...disponibilidades,
     novaDisponibilidade,
   ]);
+  registarAccaoUtilizador("Disponibilidade criada", "agenda médica", `Médico ID ${medicoId}; ${data}, ${horaInicio}-${horaFim}`)
 
   return novaDisponibilidade;
 }
@@ -291,6 +301,7 @@ export function actualizarDisponibilidade(
   };
 
   guardarDisponibilidades(disponibilidades);
+  registarAccaoUtilizador("Disponibilidade editada", "agenda médica", `Médico ID ${medicoId}; horário ID ${id}; ${data}, ${horaInicio}-${horaFim}`)
 
   return disponibilidades[indice];
 }
@@ -338,6 +349,7 @@ export function removerDisponibilidade(
       (item) => String(item.id) !== String(id)
     )
   );
+  registarAccaoUtilizador("Disponibilidade removida", "agenda médica", `Médico ID ${medicoId}; horário ID ${id}; ${disponibilidade.data} ${disponibilidade.horaInicio}-${disponibilidade.horaFim}`)
 
   return true;
 }

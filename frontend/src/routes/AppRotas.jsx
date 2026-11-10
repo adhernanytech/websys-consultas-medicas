@@ -8,6 +8,7 @@ import AdminLayout from "../administrador/layouts/LayoutAdmin"
 
 /* ROLAGEM */
 import ScrollToTop from "../components/ScrollPraCima"
+import ActivityTracker from "../components/ActivityTracker"
 
 /* Proteção rotas */
 import RotaPacienteProtegida from "../components/paciente/RotaPacienteProtegida"
@@ -30,6 +31,7 @@ import DashboardPaciente from "../paciente/pages/DashboardPaciente"
 import PerfilPaciente from "../paciente/pages/PerfilPaciente"
 import DetalhesConsulta from "../paciente/pages/DetalhesConsulta"
 import HistoricoClinicoPaciente from "../paciente/pages/HistoricoClinicoPaciente"
+import NotificacoesPaciente from "../paciente/pages/NotificacoesPaciente"
 
 /* Páginas do médico */
 import DashboardMedico from "../medico/pages/DashboardMedico"
@@ -55,6 +57,11 @@ import GerirContasMedicas from "../administrador/pages/GerirContasMedicas"
 import GerirUtilizadores from "../administrador/pages/GerirUtilizadores"
 import GerirEspecialidades from "../administrador/pages/GerirEspecialidades"
 import CriarMedico from "../administrador/pages/CriarMedico.jsx"
+import GerirConsultasAdmin from "../administrador/pages/GerirConsultasAdmin"
+import RelatoriosAdmin from "../administrador/pages/RelatoriosAdmin"
+import ActividadeAdmin from "../administrador/pages/ActividadeAdmin"
+import ConfiguracoesSistemaAdmin from "../administrador/pages/ConfiguracoesSistemaAdmin"
+import ContasUtilizadoresAdmin from "../administrador/pages/ContasUtilizadoresAdmin"
 
 
 
@@ -65,6 +72,7 @@ function AppRotas() {
         ROLAR PRA CIMA - sempre que eu mudar de rota 
     */}
       <ScrollToTop />
+      <ActivityTracker />
 
       <Routes>
 
@@ -175,6 +183,11 @@ function AppRotas() {
               element={<HistoricoClinicoPaciente />}
             />
 
+            <Route
+              path="/paciente/notificacoes"
+              element={<NotificacoesPaciente />}
+            />
+
           </Route>
 
         </Route>
@@ -267,6 +280,11 @@ function AppRotas() {
             />
 
             <Route
+              path="/admin/contas-utilizadores"
+              element={<ContasUtilizadoresAdmin />}
+            />
+
+            <Route
               path="/admin/especialidades"
               element={<GerirEspecialidades />}
             />
@@ -274,6 +292,26 @@ function AppRotas() {
             <Route
               path="/admin/medicos/criar"
               element={<CriarMedico />}
+            />
+
+            <Route
+              path="/admin/consultas"
+              element={<GerirConsultasAdmin />}
+            />
+
+            <Route
+              path="/admin/relatorios"
+              element={<RelatoriosAdmin />}
+            />
+
+            <Route
+              path="/admin/actividade"
+              element={<ActividadeAdmin />}
+            />
+
+            <Route
+              path="/admin/configuracoes"
+              element={<ConfiguracoesSistemaAdmin />}
             />
 
           </Route>

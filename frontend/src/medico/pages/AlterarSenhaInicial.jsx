@@ -1,3 +1,4 @@
+import { registarAccaoUtilizador } from "../../data/auditoriaAdmin";
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -111,6 +112,7 @@ function AlterarSenhaInicial() {
         role: "medico",
         tipo: "medico",
       });
+      registarAccaoUtilizador("Palavra-passe inicial alterada", "segurança da conta", `Alteração obrigatória concluída para o médico ID ${usuarioActualizado.id}`)
 
       setMensagem("Palavra-passe alterada com sucesso.");
       setTipoMensagem("sucesso");

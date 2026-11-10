@@ -6,21 +6,23 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import medicos from "../../data/medicos";
+import { obterMedicos } from "../../data/medicos";
 import {
   obterDisponibilidadesDoMedico,
 } from "../../data/disponibilidades";
 import { criarConsulta } from "../../data/consultas";
-import { obterUsuarioAutenticado } from "../../data/usuarios";
+import { obterUsuarioAutenticado, obterUsuarioPorId } from "../../data/usuarios";
 
 export default function MarcarConsulta() {
   const { medicoId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const medico = medicos.find(
+  const perfilMedico = obterMedicos().find(
     (item) => String(item.id) === String(medicoId)
   );
+  const contaMedico = perfilMedico ? obterUsuarioPorId(perfilMedico.usuarioId) : null;
+  const medico = contaMedico && contaMedico.ativo !== false ? perfilMedico : null;
 
   const [disponibilidadeId, setDisponibilidadeId] = useState("");
   const [motivo, setMotivo] = useState("");
@@ -98,6 +100,11 @@ export default function MarcarConsulta() {
     );
     return;
   }
+
+  const confirmar = window.confirm(
+    `Confirma a marcação da consulta com ${medico.nome} para o horário seleccionado?`
+  );
+  if (!confirmar) return;
 
   setAGuardar(true);
 

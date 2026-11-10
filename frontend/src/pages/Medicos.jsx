@@ -2,11 +2,16 @@ import { useEffect, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 
 import { obterMedicos } from "../data/medicos"
+import { obterUsuarioPorId } from "../data/usuarios"
 import DoctorCard from "../components/CardMedico"
+import AppIcon from "../components/ui/AppIcon"
 
 
 function Medicos() {
-  const medicos = obterMedicos()
+  const medicos = obterMedicos().filter((medico) => {
+    const conta = obterUsuarioPorId(medico.usuarioId)
+    return Boolean(conta) && conta.ativo !== false
+  })
 
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -255,14 +260,16 @@ function Medicos() {
           CABEÇALHO
       ====*/}
 
-      <section className="bg-white">
+      <section className="border-b border-borda bg-white">
 
         <div className="
-          max-w-6xl
           mx-auto
-          px-6
+          max-w-7xl
+          px-5
           py-14
+          sm:px-8
           sm:py-16
+          lg:px-10
         ">
 
           <div className="max-w-3xl">
@@ -270,8 +277,8 @@ function Medicos() {
             <p className="
               text-sm
               uppercase
-              tracking-widest
-              font-semibold
+              tracking-[0.16em]
+              font-bold
               text-primaria
             ">
               Profissionais
@@ -282,6 +289,7 @@ function Medicos() {
               text-4xl
               sm:text-5xl
               font-bold
+              tracking-tight
               text-texto
               mt-3
             ">
@@ -293,6 +301,7 @@ function Medicos() {
               text-lg
               text-texto-secundario
               mt-5
+              max-w-2xl
               leading-relaxed
             ">
               Pesquise pelo nome do médico ou pela
@@ -309,7 +318,7 @@ function Medicos() {
 
           <form
             onSubmit={pesquisarMedicos}
-            className="mt-8 max-w-3xl"
+            className="mt-8 max-w-3xl rounded-2xl border border-borda bg-fundo p-2 sm:flex sm:items-center"
           >
 
             <div className="
@@ -329,10 +338,12 @@ function Medicos() {
                   setMensagemPesquisa("")
                 }}
                 className="
+                  min-w-0
                   flex-1
                   border
-                  border-gray-300
-                  rounded-lg
+                  border-borda
+                  bg-white
+                  rounded-xl
                   px-4
                   py-3
                   outline-none
@@ -350,14 +361,14 @@ function Medicos() {
                   text-white
                   px-6
                   py-3
-                  rounded-lg
+                  rounded-xl
                   font-medium
                   hover:bg-primaria-hover
                   transition
                   cursor-pointer
                 "
               >
-                Pesquisar
+                <span className="inline-flex items-center justify-center gap-2"><AppIcon name="search" size={17} /> Pesquisar</span>
               </button>
 
 
@@ -412,10 +423,13 @@ function Medicos() {
       ====*/}
 
       <section className="
-        max-w-6xl
         mx-auto
-        px-6
+        max-w-7xl
+        px-5
         py-12
+        sm:px-8
+        sm:py-14
+        lg:px-10
       ">
 
 
@@ -559,7 +573,7 @@ function Medicos() {
           <div className="
             grid
             grid-cols-1
-            md:grid-cols-2
+            sm:grid-cols-2
             lg:grid-cols-3
             gap-6
           ">
@@ -573,6 +587,7 @@ function Medicos() {
                 nome={medico.nome}
                 especialidade={medico.especialidade}
                 experiencia={medico.experiencia}
+                foto={medico.foto}
               />
 
             ))}
@@ -594,6 +609,7 @@ function Medicos() {
             rounded-2xl
             p-10
             text-center
+            shadow-sm
           ">
 
             <h3 className="

@@ -1,6 +1,7 @@
 // src/pages/RedefinirSenha.jsx
 import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import AppIcon from '../components/ui/AppIcon';
 
 const RedefinirSenha = () => {
   const [searchParams] = useSearchParams();
@@ -29,17 +30,18 @@ const RedefinirSenha = () => {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <h2 className="text-xl text-red-600">Link de recuperação inválido ou expirado.</h2>
+      <div className="min-h-[60vh] flex items-center justify-center bg-fundo px-5 py-12">
+        <div className="max-w-lg rounded-2xl border border-borda bg-white p-8 text-center shadow-sm"><h2 className="text-xl font-bold text-erro">Link de recuperação inválido ou expirado.</h2><p className="mt-3 text-texto-secundario">Solicite um novo link de recuperação para continuar.</p><Link to="/esqueci-senha" className="mt-5 inline-flex rounded-xl bg-primaria px-5 py-3 font-semibold text-white hover:bg-primaria-hover">Pedir novo link</Link></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
+    <div className="min-h-screen flex items-center justify-center bg-fundo py-12 px-4 sm:px-6">
+      <div className="max-w-md w-full space-y-8 border border-borda bg-white p-8 rounded-2xl shadow-lg shadow-slate-900/5">
         <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primaria/10 text-primaria"><AppIcon name="shield" size={26} /></span>
+          <h2 className="mt-5 text-center text-3xl font-extrabold text-texto">
             Criar Nova Senha
           </h2>
         </div>
@@ -51,7 +53,7 @@ const RedefinirSenha = () => {
             <input
               type="password"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-xl border border-borda px-4 py-3 text-texto focus:outline-none focus:ring-2 focus:ring-primaria/20 focus:border-primaria"
               placeholder="Nova Senha"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
@@ -59,7 +61,7 @@ const RedefinirSenha = () => {
             <input
               type="password"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-xl border border-borda px-4 py-3 text-texto focus:outline-none focus:ring-2 focus:ring-primaria/20 focus:border-primaria"
               placeholder="Confirmar Nova Senha"
               value={confirmarSenha}
               onChange={(e) => setConfirmarSenha(e.target.value)}
@@ -67,11 +69,12 @@ const RedefinirSenha = () => {
           </div>
           <button
             type="submit"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-primaria hover:bg-primaria-hover transition"
           >
             Redefinir e Entrar
           </button>
         </form>
+        <p className="text-center text-sm text-texto-secundario">Lembrou-se da palavra-passe? <Link to="/login" className="font-semibold text-primaria hover:underline">Voltar ao login</Link></p>
       </div>
     </div>
   );

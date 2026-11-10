@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import AppIcon from "../../components/ui/AppIcon";
 
 import {
   obterMedicoAutenticado,
@@ -60,7 +61,7 @@ function CartaoResumo({
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${cor}`}
           aria-hidden="true"
         >
-          {simbolo}
+          <AppIcon name={simbolo || "calendar"} size={22} />
         </div>
       </div>
     </article>
@@ -163,7 +164,8 @@ export default function DashboardMedico() {
             aria-hidden="true"
           />
 
-          <div className="relative z-10 max-w-2xl">
+          <div className="relative z-10 flex max-w-4xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-2xl">
             <span className="inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
               Área profissional
             </span>
@@ -197,6 +199,10 @@ export default function DashboardMedico() {
               </a>
             </div>
           </div>
+          {medico.foto && (
+            <img src={medico.foto} alt={`Fotografia de ${nomeMedico}`} className="h-24 w-24 self-start rounded-2xl border-2 border-white/30 object-cover shadow-lg sm:h-28 sm:w-28 sm:self-center" />
+          )}
+          </div>
         </header>
 
         {/* Indicadores */}
@@ -220,7 +226,7 @@ export default function DashboardMedico() {
               titulo="Consultas por atender"
               valor={consultasAgendadas.length}
               descricao="Agendadas e confirmadas"
-              simbolo="C"
+              simbolo="calendar"
               cor="bg-blue-50 text-blue-700"
             />
 
@@ -228,7 +234,7 @@ export default function DashboardMedico() {
               titulo="Consultas de hoje"
               valor={consultasHoje.length}
               descricao="Marcações para hoje"
-              simbolo="H"
+              simbolo="clock"
               cor="bg-violet-50 text-violet-700"
             />
 
@@ -236,7 +242,7 @@ export default function DashboardMedico() {
               titulo="Horários disponíveis"
               valor={horariosLivres.length}
               descricao="Horários livres registados"
-              simbolo="D"
+              simbolo="check"
               cor="bg-green-50 text-green-700"
             />
 
@@ -244,13 +250,22 @@ export default function DashboardMedico() {
               titulo="Disponibilidades"
               valor={disponibilidades.length}
               descricao="Registos da sua agenda"
-              simbolo="A"
+              simbolo="clipboard"
               cor="bg-amber-50 text-amber-700"
             />
           </div>
         </section>
 
         {/* Conteúdo principal */}
+
+        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><AppIcon name="users" size={20} /></span><div><p className="text-sm text-texto-secundario">Pacientes acompanhados</p><p className="text-2xl font-bold text-texto">{new Set(consultas.map((consulta) => String(consulta.pacienteId ?? "")).filter(Boolean)).size}</p></div></div>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700"><AppIcon name="check" size={20} /></span><div><p className="text-sm text-texto-secundario">Consultas realizadas</p><p className="text-2xl font-bold text-texto">{consultas.filter((consulta) => consulta.estado === "Realizada" || consulta.estado === "Concluída").length}</p></div></div>
+          </div>
+        </section>
 
         <div className="mt-8 grid items-start gap-6 lg:grid-cols-3">
 
@@ -282,8 +297,8 @@ export default function DashboardMedico() {
 
             {proximasConsultas.length === 0 ? (
               <div className="mt-6 rounded-xl border border-dashed border-gray-300 px-5 py-10 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-xl text-gray-500">
-                  C
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                  <AppIcon name="calendar" size={23} />
                 </div>
 
                 <h3 className="mt-4 font-semibold text-texto">
@@ -375,8 +390,8 @@ export default function DashboardMedico() {
                   to="/medico/disponibilidades"
                   className="group flex items-center gap-3 rounded-xl border border-gray-200 p-4 transition hover:border-primaria hover:bg-blue-50/50"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 font-bold text-blue-700">
-                    +
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                    <AppIcon name="clock" size={20} />
                   </span>
 
                   <span className="min-w-0 flex-1">
@@ -398,8 +413,8 @@ export default function DashboardMedico() {
                   to="/medico/pacientes"
                   className="group flex items-center gap-3 rounded-xl border border-gray-200 p-4 transition hover:border-primaria hover:bg-blue-50/50"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 font-bold text-violet-700">
-                    P
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
+                    <AppIcon name="users" size={20} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold text-texto">
@@ -418,8 +433,8 @@ export default function DashboardMedico() {
                   to="/medico/agenda"
                   className="group flex items-center gap-3 rounded-xl border border-gray-200 p-4 transition hover:border-primaria hover:bg-blue-50/50"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50 font-bold text-green-700">
-                    C
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-700">
+                    <AppIcon name="calendar" size={20} />
                   </span>
 
                   <span className="min-w-0 flex-1">

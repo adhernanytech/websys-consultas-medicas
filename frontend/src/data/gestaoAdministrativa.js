@@ -6,6 +6,7 @@ import {
 } from "./usuarios"
 
 import { obterMedicoDaConta } from "./medicos"
+import { registarAccaoAdmin } from "./auditoriaAdmin"
 
 function exigirAdministrador() {
   const usuario = obterUsuarioAutenticado()
@@ -114,7 +115,7 @@ export function actualizarEstadoUtilizador(
     }
   }
 
-  return actualizarUsuario(
+  const actualizado = actualizarUsuario(
     utilizador.id,
     {
       ativo: Boolean(ativo),
@@ -122,6 +123,8 @@ export function actualizarEstadoUtilizador(
         new Date().toISOString(),
     }
   )
+  registarAccaoAdmin(ativo ? "Conta activada" : "Conta desactivada", "utilizador", `${utilizador.nome || utilizador.email} (ID ${utilizador.id})`)
+  return actualizado
 }
 
 export function obterEstadoContaMedica(

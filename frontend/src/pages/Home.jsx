@@ -1,925 +1,160 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-
 import DoctorCard from "../components/CardMedico"
-import EspecialidadeCard from "../components/EspecialidadeCard"
-
-import medicos from "../data/medicos"
-import especialidadesIniciais from "../data/especialidades"
-
+import { obterMedicos } from "../data/medicos"
+import { obterUsuarioPorId } from "../data/usuarios"
+import { obterEspecialidades } from "../data/especialidades"
+import AppIcon from "../components/ui/AppIcon"
 
 function Home() {
-
   const [pesquisa, setPesquisa] = useState("")
   const [mensagemPesquisa, setMensagemPesquisa] = useState("")
-
   const navegar = useNavigate()
 
-
-  /*
-    MÉDICOS EM DESTAQUE
-
-    Por enquanto mostramos apenas alguns médicos.
-    A página /medicos continuará a mostrar todos.
-  */
-
-  const medicosDestaque = medicos.slice(0, 3)
-
-
-  /*
-    ESPECIALIDADES EM DESTAQUE
-
-    Por enquanto mostramos apenas algumas.
-    A página /especialidades continuará a mostrar todas.
-  */
-
-  const especialidadesDestaque = especialidadesIniciais.slice(0, 3)
-
-
-  /*
-    PESQUISA
-  */
+  const medicosActivos = obterMedicos().filter((medico) => {
+    const conta = obterUsuarioPorId(medico.usuarioId)
+    return Boolean(conta) && conta.ativo !== false
+  })
+  const especialidadesActivas = obterEspecialidades().filter((item) => item.ativo !== false)
+  const medicosDestaque = medicosActivos.slice(0, 3)
+  const especialidadesDestaque = especialidadesActivas.slice(0, 4)
 
   function pesquisarMedicos(evento) {
-
     evento.preventDefault()
-
     const termo = pesquisa.trim()
-
-    if (termo === "") {
-      setMensagemPesquisa(
-        "Digite o nome de um médico ou especialidade."
-      )
-      return
-    }
-
     if (termo.length < 2) {
-      setMensagemPesquisa(
-        "Digite pelo menos 2 caracteres."
-      )
+      setMensagemPesquisa(termo ? "Digite pelo menos 2 caracteres." : "Digite o nome de um médico ou uma especialidade.")
       return
     }
-
-    /*
-      A pesquisa da Home serve principalmente
-      como ponto de entrada.
-
-      Depois podemos melhorar isto para transportar
-      o termo directamente para /medicos.
-    */
-
     navegar(`/medicos?pesquisa=${encodeURIComponent(termo)}`)
   }
 
+  const passos = [
+    { numero: "01", titulo: "Encontre um profissional", texto: "Explore os médicos e as especialidades disponíveis no Centro Médico." },
+    { numero: "02", titulo: "Escolha o horário", texto: "Consulte o perfil do médico e os horários que estiverem disponíveis." },
+    { numero: "03", titulo: "Acompanhe a consulta", texto: "Aceda à sua conta para consultar e gerir as suas marcações." },
+  ]
 
   return (
+    <main className="min-h-screen bg-fundo">
+      <section className="relative overflow-hidden bg-white">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-primaria/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-secundaria/10 blur-3xl" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-14 sm:px-8 sm:py-20 lg:grid-cols-[1.05fr_.95fr] lg:gap-16 lg:px-10 lg:py-24">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-primaria/15 bg-primaria/5 px-3.5 py-2 text-sm font-semibold text-primaria">
+              <AppIcon name="clinic" size={17} /> Centro Médico Wenji Maka
+            </div>
+            <h1 className="mt-6 max-w-2xl text-4xl font-bold leading-tight tracking-tight text-texto sm:text-5xl lg:text-6xl">
+              Cuidar da sua saúde começa com <span className="text-primaria">uma boa escolha.</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-8 text-texto-secundario">
+              Encontre médicos, conheça as especialidades disponíveis e organize as suas consultas num só lugar — de forma simples e conveniente.
+            </p>
+            <form onSubmit={pesquisarMedicos} className="mt-8 max-w-xl rounded-2xl border border-borda bg-white p-2 shadow-lg shadow-slate-900/5 sm:flex sm:items-center">
+              <label htmlFor="pesquisa-home" className="sr-only">Pesquisar médico ou especialidade</label>
+              <div className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2">
+                <AppIcon name="search" size={21} className="shrink-0 text-texto-suave" />
+                <input id="pesquisa-home" type="search" placeholder="Médico ou especialidade" value={pesquisa} onChange={(evento) => { setPesquisa(evento.target.value); setMensagemPesquisa("") }} className="w-full min-w-0 border-0 bg-transparent py-2 text-texto outline-none placeholder:text-texto-suave focus:ring-0" />
+              </div>
+              <button type="submit" className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primaria px-5 py-3.5 font-semibold text-white transition hover:bg-primaria-hover sm:mt-0 sm:w-auto">
+                Pesquisar <AppIcon name="search" size={17} />
+              </button>
+            </form>
+            {mensagemPesquisa && <p role="alert" className="mt-2 text-sm text-erro">{mensagemPesquisa}</p>}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <Link to="/medicos" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primaria px-6 py-3.5 font-semibold text-white transition hover:bg-primaria-hover">
+                Encontrar um médico <AppIcon name="arrow-right" size={18} />
+              </Link>
+              <Link to="/sobre" className="inline-flex items-center justify-center rounded-xl border border-borda px-6 py-3.5 font-semibold text-texto transition hover:border-primaria/40 hover:bg-fundo">
+                Conhecer o Centro
+              </Link>
+            </div>
+            <p className="mt-5 text-sm text-texto-secundario">Já tem conta? <Link to="/login" className="font-semibold text-primaria hover:underline">Inicie sessão</Link> para gerir as suas consultas.</p>
+          </div>
 
-    <main className="bg-fundo min-h-screen">
+          <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
+            <div className="absolute -inset-3 rounded-[2rem] bg-primaria/10 blur-sm" />
+            <div className="relative overflow-hidden rounded-[1.75rem] border border-primaria/10 bg-gradient-to-br from-primaria/10 via-white to-secundaria/10 p-5 sm:p-7">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primaria">Saúde mais organizada</p>
+                  <h2 className="mt-2 text-2xl font-bold text-texto sm:text-3xl">O próximo passo é seu.</h2>
+                  <p className="mt-3 max-w-sm leading-6 text-texto-secundario">Use a plataforma para descobrir profissionais e acompanhar as suas marcações.</p>
+                </div>
+                <div className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primaria text-white shadow-md sm:flex"><AppIcon name="stethoscope" size={28} /></div>
+              </div>
+              <div className="mt-7 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primaria/10 text-primaria"><AppIcon name="users" size={21} /></div>
+                  <p className="mt-4 text-2xl font-bold text-texto">{medicosActivos.length}</p>
+                  <p className="mt-1 text-sm text-texto-secundario">{medicosActivos.length === 1 ? "médico disponível" : "médicos disponíveis"}</p>
+                </div>
+                <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secundaria/15 text-primaria"><AppIcon name="activity" size={21} /></div>
+                  <p className="mt-4 text-2xl font-bold text-texto">{especialidadesActivas.length}</p>
+                  <p className="mt-1 text-sm text-texto-secundario">{especialidadesActivas.length === 1 ? "especialidade" : "especialidades"}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-3 rounded-2xl bg-primaria p-4 text-white">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15"><AppIcon name="calendar" size={23} /></span>
+                <div className="min-w-0 flex-1"><p className="font-semibold">Marcação mais conveniente</p><p className="mt-0.5 text-sm text-white/80">Consulte os profissionais e siga os passos online.</p></div>
+                <AppIcon name="arrow-right" size={20} />
+              </div>
+              <p className="mt-4 text-xs leading-5 text-texto-secundario">A disponibilidade apresentada depende dos dados e horários registados na plataforma.</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
+      <section className="border-y border-borda bg-fundo-terciario/70">
+        <div className="mx-auto grid max-w-7xl gap-5 px-5 py-8 sm:grid-cols-3 sm:px-8 lg:px-10">
+          {[{ icon: "search", title: "Pesquisa simples", text: "Procure por nome ou especialidade." }, { icon: "users", title: "Perfis profissionais", text: "Conheça os médicos disponíveis." }, { icon: "calendar", title: "Consultas organizadas", text: "Acompanhe as marcações na sua conta." }].map((item) => (
+            <div key={item.title} className="flex items-start gap-4 rounded-xl p-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-primaria shadow-sm"><AppIcon name={item.icon} size={21} /></span>
+              <div><h2 className="font-bold text-texto">{item.title}</h2><p className="mt-1 text-sm leading-6 text-texto-secundario">{item.text}</p></div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* =====================================================
-          HERO
-      ====================================================== */}
+      <section className="mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20 lg:px-10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl"><p className="text-sm font-bold uppercase tracking-[0.16em] text-primaria">Especialidades</p><h2 className="mt-3 text-3xl font-bold tracking-tight text-texto sm:text-4xl">Encontre cuidados adequados às suas necessidades</h2><p className="mt-4 leading-7 text-texto-secundario">Explore as áreas disponíveis e descubra os profissionais associados a cada uma.</p></div>
+          <Link to="/especialidades" className="inline-flex items-center gap-2 font-semibold text-primaria hover:text-primaria-hover">Ver todas <AppIcon name="arrow-right" size={18} /></Link>
+        </div>
+        {especialidadesDestaque.length ? <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {especialidadesDestaque.map((especialidade, indice) => (
+            <Link key={especialidade.id ?? especialidade.nome} to={`/medicos?especialidade=${encodeURIComponent(especialidade.nome)}`} className="group rounded-2xl border border-borda bg-white p-5 transition hover:-translate-y-1 hover:border-primaria/30 hover:shadow-lg">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primaria/10 text-primaria"><AppIcon name={["activity", "stethoscope", "heart", "clipboard"][indice % 4]} size={23} /></span>
+              <h3 className="mt-5 text-lg font-bold text-texto group-hover:text-primaria">{especialidade.nome}</h3>
+              <p className="mt-2 line-clamp-3 text-sm leading-6 text-texto-secundario">{especialidade.descricao || "Consulte os profissionais disponíveis nesta especialidade."}</p>
+              <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primaria">Ver médicos <AppIcon name="arrow-right" size={16} /></span>
+            </Link>
+          ))}
+        </div> : <div className="mt-8 rounded-2xl border border-dashed border-borda bg-white p-8 text-center"><p className="font-semibold text-texto">As especialidades serão apresentadas aqui.</p><p className="mt-2 text-sm text-texto-secundario">Consulte novamente quando forem disponibilizadas pelo Centro.</p></div>}
+      </section>
 
       <section className="bg-white">
-
-        <div className="max-w-6xl mx-auto px-6 py-16 sm:py-20 lg:py-24">
-
-          <div className="max-w-4xl mx-auto text-center">
-
-            <p className="text-sm uppercase tracking-widest font-semibold text-primaria">
-              Cuidados de saúde mais acessíveis
-            </p>
-
-            <h1 className="
-              text-4xl
-              sm:text-5xl
-              lg:text-6xl
-              font-bold
-              text-texto
-              mt-4
-              leading-tight
-            ">
-              Encontre o médico certo
-              <span className="block text-primaria">
-                para a sua consulta.
-              </span>
-            </h1>
-
-            <p className="
-              text-lg
-              sm:text-xl
-              text-texto-secundario
-              mt-6
-              max-w-2xl
-              mx-auto
-              leading-relaxed
-            ">
-              Consulte médicos e especialidades disponíveis,
-              encontre o profissional que procura e marque
-              a sua consulta de forma simples e conveniente.
-            </p>
-
-
-            {/* PESQUISA */}
-
-            <form
-              onSubmit={pesquisarMedicos}
-              className="
-                mt-8
-                max-w-2xl
-                mx-auto
-              "
-            >
-
-              <div className="
-                flex
-                flex-col
-                sm:flex-row
-                gap-3
-              ">
-
-                <input
-                  type="search"
-                  placeholder="Pesquisar médico ou especialidade"
-                  value={pesquisa}
-                  onChange={(evento) => {
-                    setPesquisa(evento.target.value)
-                    setMensagemPesquisa("")
-                  }}
-                  className="
-                    flex-1
-                    border
-                    border-gray-300
-                    rounded-lg
-                    px-4
-                    py-3
-                    outline-none
-                    focus:border-primaria
-                    focus:ring-2
-                    focus:ring-primaria/20
-                  "
-                />
-
-                <button
-                  type="submit"
-                  className="
-                    bg-primaria
-                    text-white
-                    px-6
-                    py-3
-                    rounded-lg
-                    font-medium
-                    hover:bg-primaria-hover
-                    transition
-                    cursor-pointer
-                  "
-                >
-                  Pesquisar
-                </button>
-
-              </div>
-
-            </form>
-
-
-            {mensagemPesquisa && (
-
-              <p className="mt-3 text-sm text-red-600">
-                {mensagemPesquisa}
-              </p>
-
-            )}
-
-
-            {/* BOTÕES PRINCIPAIS */}
-
-            <div className="
-              flex
-              flex-col
-              sm:flex-row
-              justify-center
-              gap-3
-              mt-6
-            ">
-
-              <button
-                type="button"
-                onClick={() => navegar("/medicos")}
-                className="
-                  bg-primaria
-                  text-white
-                  px-6
-                  py-3
-                  rounded-lg
-                  font-medium
-                  hover:bg-primaria-hover
-                  transition
-                  cursor-pointer
-                "
-              >
-                Encontrar um médico
-              </button>
-
-
-              <Link
-                to="/registro"
-                className="
-                  border
-                  border-primaria
-                  text-primaria
-                  px-6
-                  py-3
-                  rounded-lg
-                  font-medium
-                  hover:bg-primaria/5
-                  transition
-                "
-              >
-                Criar uma conta
-              </Link>
-
-            </div>
-
-          </div>
-
+        <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20 lg:px-10">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.16em] text-primaria">Profissionais</p><h2 className="mt-3 text-3xl font-bold tracking-tight text-texto sm:text-4xl">Conheça alguns dos nossos médicos</h2><p className="mt-4 max-w-2xl leading-7 text-texto-secundario">Consulte os perfis, a experiência e as informações profissionais disponíveis.</p></div><Link to="/medicos" className="inline-flex items-center gap-2 font-semibold text-primaria hover:text-primaria-hover">Ver todos os médicos <AppIcon name="arrow-right" size={18} /></Link></div>
+          {medicosDestaque.length ? <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{medicosDestaque.map((medico) => <DoctorCard key={medico.id} id={medico.id} nome={medico.nome} especialidade={medico.especialidade} experiencia={medico.experiencia} foto={medico.foto} />)}</div> : <div className="mt-8 rounded-2xl border border-dashed border-borda bg-fundo p-8 text-center"><p className="font-semibold text-texto">Ainda não existem perfis médicos públicos.</p><p className="mt-2 text-sm text-texto-secundario">Os perfis serão apresentados aqui quando as contas e os dados profissionais estiverem activos.</p></div>}
         </div>
-
       </section>
 
-
-
-      {/* =====================================================
-          ESPECIALIDADES
-      ====================================================== */}
-
-      <section className="max-w-6xl mx-auto px-6 py-14 sm:py-16">
-
-        <div className="
-          flex
-          flex-col
-          sm:flex-row
-          sm:items-end
-          sm:justify-between
-          gap-4
-        ">
-
-          <div>
-
-            <p className="text-sm uppercase tracking-widest font-semibold text-primaria">
-              Especialidades
-            </p>
-
-            <h2 className="
-              text-3xl
-              font-bold
-              text-texto
-              mt-2
-            ">
-              Cuidados para diferentes necessidades
-            </h2>
-
-            <p className="
-              text-texto-secundario
-              mt-3
-              max-w-2xl
-            ">
-              Conheça algumas das especialidades disponíveis
-              na nossa instituição.
-            </p>
-
-          </div>
-
-
-          <Link
-            to="/especialidades"
-            className="
-              text-primaria
-              font-medium
-              hover:text-primaria-hover
-              transition
-            "
-          >
-            Ver todas →
-          </Link>
-
+      <section className="mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20 lg:px-10">
+        <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-start">
+          <div><p className="text-sm font-bold uppercase tracking-[0.16em] text-primaria">Como funciona</p><h2 className="mt-3 text-3xl font-bold tracking-tight text-texto sm:text-4xl">Três passos para começar</h2><p className="mt-4 leading-7 text-texto-secundario">A plataforma foi pensada para tornar a procura de profissionais e a gestão das consultas mais claras.</p><Link to="/registro" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primaria px-5 py-3 font-semibold text-white transition hover:bg-primaria-hover">Criar a minha conta <AppIcon name="arrow-right" size={18} /></Link></div>
+          <div className="space-y-4">{passos.map((passo) => <article key={passo.numero} className="flex gap-5 rounded-2xl border border-borda bg-white p-5 sm:p-6"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primaria/10 text-sm font-bold text-primaria">{passo.numero}</span><div><h3 className="text-lg font-bold text-texto">{passo.titulo}</h3><p className="mt-2 leading-6 text-texto-secundario">{passo.texto}</p></div></article>)}</div>
         </div>
-
-
-        <div className="
-          grid
-          grid-cols-1
-          md:grid-cols-2
-          lg:grid-cols-3
-          gap-6
-          mt-8
-        ">
-
-          {especialidadesDestaque.map((especialidade) => (
-
-            <EspecialidadeCard
-              key={especialidade.id}
-              nome={especialidade.nome}
-              descricao={especialidade.descricao}
-            />
-
-          ))}
-
-        </div>
-
       </section>
 
-
-
-      {/* =====================================================
-          MÉDICOS EM DESTAQUE
-      ====================================================== */}
-
-      <section className="bg-white border-y border-borda">
-
-        <div className="max-w-6xl mx-auto px-6 py-14 sm:py-16">
-
-          <div className="
-            flex
-            flex-col
-            sm:flex-row
-            sm:items-end
-            sm:justify-between
-            gap-4
-          ">
-
-            <div>
-
-              <p className="text-sm uppercase tracking-widest font-semibold text-primaria">
-                Profissionais
-              </p>
-
-              <h2 className="
-                text-3xl
-                font-bold
-                text-texto
-                mt-2
-              ">
-                Conheça os nossos médicos
-              </h2>
-
-              <p className="
-                text-texto-secundario
-                mt-3
-                max-w-2xl
-              ">
-                Consulte os profissionais disponíveis e
-                conheça as suas áreas de especialização.
-              </p>
-
-            </div>
-
-
-            <Link
-              to="/medicos"
-              className="
-                text-primaria
-                font-medium
-                hover:text-primaria-hover
-                transition
-              "
-            >
-              Ver todos →
-            </Link>
-
-          </div>
-
-
-          <div className="
-            grid
-            grid-cols-1
-            md:grid-cols-2
-            lg:grid-cols-3
-            gap-6
-            mt-8
-          ">
-
-            {medicosDestaque.map((medico) => (
-
-              <DoctorCard
-                key={medico.id}
-                id={medico.id}
-                nome={medico.nome}
-                especialidade={medico.especialidade}
-                experiencia={medico.experiencia}
-              />
-
-            ))}
-
-          </div>
-
+      <section className="px-5 pb-14 sm:px-8 sm:pb-20 lg:px-10">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-primaria px-6 py-10 text-white sm:px-10 sm:py-14 lg:flex lg:items-center lg:justify-between lg:gap-8">
+          <div className="max-w-2xl"><p className="text-sm font-bold uppercase tracking-[0.16em] text-white/75">Comece agora</p><h2 className="mt-3 text-3xl font-bold sm:text-4xl">Dê o próximo passo na organização dos seus cuidados.</h2><p className="mt-4 leading-7 text-white/80">Explore os médicos disponíveis ou crie uma conta para acompanhar as suas consultas.</p></div>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row lg:mt-0 lg:shrink-0"><Link to="/medicos" className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-semibold text-primaria transition hover:bg-blue-50">Ver médicos <AppIcon name="arrow-right" size={18} /></Link><Link to="/registro" className="inline-flex items-center justify-center rounded-xl border border-white/40 px-5 py-3.5 font-semibold text-white transition hover:bg-white/10">Criar conta</Link></div>
         </div>
-
       </section>
-
-
-
-      {/* =====================================================
-          COMO FUNCIONA
-      ====================================================== */}
-
-      <section className="max-w-6xl mx-auto px-6 py-14 sm:py-16">
-
-        <div className="text-center max-w-2xl mx-auto">
-
-          <p className="text-sm uppercase tracking-widest font-semibold text-primaria">
-            Como funciona
-          </p>
-
-          <h2 className="
-            text-3xl
-            font-bold
-            text-texto
-            mt-3
-          ">
-            Marcar uma consulta é simples
-          </h2>
-
-          <p className="
-            text-texto-secundario
-            mt-4
-            leading-relaxed
-          ">
-            Em poucos passos pode encontrar um profissional,
-            escolher um horário disponível e acompanhar
-            a sua consulta através da plataforma.
-          </p>
-
-        </div>
-
-
-        <div className="
-          grid
-          grid-cols-1
-          sm:grid-cols-2
-          lg:grid-cols-4
-          gap-6
-          mt-10
-        ">
-
-
-          {/* PASSO 1 */}
-
-          <article className="text-center p-5">
-
-            <div className="
-              mx-auto
-              w-12
-              h-12
-              rounded-full
-              bg-primaria
-              text-white
-              flex
-              items-center
-              justify-center
-              font-bold
-            ">
-              1
-            </div>
-
-            <h3 className="font-bold text-texto mt-4">
-              Encontre
-            </h3>
-
-            <p className="
-              text-sm
-              text-texto-secundario
-              mt-2
-              leading-relaxed
-            ">
-              Procure um médico ou uma especialidade.
-            </p>
-
-          </article>
-
-
-          {/* PASSO 2 */}
-
-          <article className="text-center p-5">
-
-            <div className="
-              mx-auto
-              w-12
-              h-12
-              rounded-full
-              bg-primaria
-              text-white
-              flex
-              items-center
-              justify-center
-              font-bold
-            ">
-              2
-            </div>
-
-            <h3 className="font-bold text-texto mt-4">
-              Escolha
-            </h3>
-
-            <p className="
-              text-sm
-              text-texto-secundario
-              mt-2
-              leading-relaxed
-            ">
-              Consulte o perfil e as informações do médico.
-            </p>
-
-          </article>
-
-
-          {/* PASSO 3 */}
-
-          <article className="text-center p-5">
-
-            <div className="
-              mx-auto
-              w-12
-              h-12
-              rounded-full
-              bg-primaria
-              text-white
-              flex
-              items-center
-              justify-center
-              font-bold
-            ">
-              3
-            </div>
-
-            <h3 className="font-bold text-texto mt-4">
-              Marque
-            </h3>
-
-            <p className="
-              text-sm
-              text-texto-secundario
-              mt-2
-              leading-relaxed
-            ">
-              Escolha uma data e horário disponíveis.
-            </p>
-
-          </article>
-
-
-          {/* PASSO 4 */}
-
-          <article className="text-center p-5">
-
-            <div className="
-              mx-auto
-              w-12
-              h-12
-              rounded-full
-              bg-primaria
-              text-white
-              flex
-              items-center
-              justify-center
-              font-bold
-            ">
-              4
-            </div>
-
-            <h3 className="font-bold text-texto mt-4">
-              Acompanhe
-            </h3>
-
-            <p className="
-              text-sm
-              text-texto-secundario
-              mt-2
-              leading-relaxed
-            ">
-              Consulte e acompanhe as suas consultas.
-            </p>
-
-          </article>
-
-        </div>
-
-      </section>
-
-
-
-      {/* =====================================================
-          VANTAGENS
-      ====================================================== */}
-
-      <section className="bg-white border-y border-borda">
-
-        <div className="max-w-6xl mx-auto px-6 py-14 sm:py-16">
-
-          <div className="text-center max-w-2xl mx-auto">
-
-            <p className="text-sm uppercase tracking-widest font-semibold text-primaria">
-              A plataforma
-            </p>
-
-            <h2 className="
-              text-3xl
-              font-bold
-              text-texto
-              mt-3
-            ">
-              Pensada para facilitar o seu atendimento
-            </h2>
-
-          </div>
-
-
-          <div className="
-            grid
-            grid-cols-1
-            md:grid-cols-2
-            lg:grid-cols-4
-            gap-6
-            mt-10
-          ">
-
-
-            <article className="
-              border
-              border-borda
-              rounded-2xl
-              p-6
-            ">
-
-              <h3 className="text-lg font-bold text-texto">
-                Simples
-              </h3>
-
-              <p className="
-                text-texto-secundario
-                mt-3
-                leading-relaxed
-              ">
-                Uma experiência simples para encontrar
-                médicos e gerir as suas consultas.
-              </p>
-
-            </article>
-
-
-            <article className="
-              border
-              border-borda
-              rounded-2xl
-              p-6
-            ">
-
-              <h3 className="text-lg font-bold text-texto">
-                Organizado
-              </h3>
-
-              <p className="
-                text-texto-secundario
-                mt-3
-                leading-relaxed
-              ">
-                Tenha as informações das suas consultas
-                organizadas num único espaço.
-              </p>
-
-            </article>
-
-
-            <article className="
-              border
-              border-borda
-              rounded-2xl
-              p-6
-            ">
-
-              <h3 className="text-lg font-bold text-texto">
-                Conveniente
-              </h3>
-
-              <p className="
-                text-texto-secundario
-                mt-3
-                leading-relaxed
-              ">
-                Consulte informações e realize determinadas
-                tarefas sem depender exclusivamente do atendimento presencial.
-              </p>
-
-            </article>
-
-
-            <article className="
-              border
-              border-borda
-              rounded-2xl
-              p-6
-            ">
-
-              <h3 className="text-lg font-bold text-texto">
-                Acompanhamento
-              </h3>
-
-              <p className="
-                text-texto-secundario
-                mt-3
-                leading-relaxed
-              ">
-                Acompanhe as suas consultas e tenha acesso
-                às informações importantes da sua marcação.
-              </p>
-
-            </article>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-
-      {/* =====================================================
-          SOBRE A INSTITUIÇÃO
-      ====================================================== */}
-
-      <section className="max-w-6xl mx-auto px-6 py-14 sm:py-16">
-
-        <div className="
-          grid
-          grid-cols-1
-          lg:grid-cols-2
-          gap-10
-          items-center
-        ">
-
-          <div>
-
-            <p className="
-              text-sm
-              uppercase
-              tracking-widest
-              font-semibold
-              text-primaria
-            ">
-              Sobre a instituição
-            </p>
-
-            <h2 className="
-              text-3xl
-              font-bold
-              text-texto
-              mt-3
-            ">
-              Uma plataforma criada para aproximar pacientes e profissionais
-            </h2>
-
-            <p className="
-              text-texto-secundario
-              mt-5
-              leading-relaxed
-            ">
-              A nossa plataforma foi desenvolvida para facilitar
-              o acesso aos serviços da instituição e tornar o processo
-              de marcação e acompanhamento das consultas mais organizado.
-            </p>
-
-            <Link
-              to="/sobre"
-              className="
-                inline-block
-                mt-6
-                text-primaria
-                font-medium
-                hover:text-primaria-hover
-                transition
-              "
-            >
-              Conheça a instituição →
-            </Link>
-
-          </div>
-
-
-          <div className="
-            bg-primaria
-            text-white
-            rounded-2xl
-            p-8
-            sm:p-10
-          ">
-
-            <h3 className="text-2xl font-bold">
-              O cuidado começa antes da consulta.
-            </h3>
-
-            <p className="
-              text-blue-100
-              mt-4
-              leading-relaxed
-            ">
-              Desde a escolha do profissional até ao acompanhamento
-              da consulta, procuramos tornar cada etapa mais simples
-              para o paciente.
-            </p>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-
-      {/* =====================================================
-          CTA FINAL
-      ====================================================== */}
-
-      <section className="max-w-6xl mx-auto px-6 pb-16">
-
-        <div className="
-          bg-primaria
-          text-white
-          rounded-2xl
-          px-6
-          py-10
-          sm:px-10
-          sm:py-12
-          text-center
-        ">
-
-          <h2 className="
-            text-2xl
-            sm:text-3xl
-            font-bold
-          ">
-            Pronto para encontrar o seu médico?
-          </h2>
-
-          <p className="
-            text-blue-100
-            mt-3
-            max-w-2xl
-            mx-auto
-          ">
-            Encontre um profissional ou crie a sua conta
-            para começar a utilizar a plataforma.
-          </p>
-
-
-          <div className="
-            flex
-            flex-col
-            sm:flex-row
-            justify-center
-            gap-3
-            mt-7
-          ">
-
-            <Link
-              to="/medicos"
-              className="
-                bg-white
-                text-primaria
-                px-6
-                py-3
-                rounded-lg
-                font-medium
-                hover:bg-gray-100
-                transition
-              "
-            >
-              Encontrar médicos
-            </Link>
-
-
-            <Link
-              to="/registro"
-              className="
-                border
-                border-white/40
-                text-white
-                px-6
-                py-3
-                rounded-lg
-                font-medium
-                hover:bg-white/10
-                transition
-              "
-            >
-              Criar uma conta
-            </Link>
-
-          </div>
-
-        </div>
-
-      </section>
-
     </main>
   )
 }

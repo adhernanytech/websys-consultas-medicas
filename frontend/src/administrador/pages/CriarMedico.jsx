@@ -19,6 +19,7 @@ function CriarMedico() {
     email: "",
     sexo: "",
     especialidadeId: "",
+    foto: "",
   })
 
   const [credenciais, setCredenciais] = useState(null)
@@ -37,8 +38,37 @@ function CriarMedico() {
     }))
   }
 
+  function seleccionarFotografia(event) {
+    const ficheiro = event.target.files?.[0]
+    if (!ficheiro) return
+    if (!ficheiro.type.startsWith("image/")) { setErro("Seleccione um ficheiro de imagem válido."); event.target.value = ""; return }
+    if (ficheiro.size > 2 * 1024 * 1024) { setErro("A fotografia não pode ultrapassar 2 MB."); event.target.value = ""; return }
+    const leitor = new FileReader()
+    leitor.onload = () => {
+      const imagem = new Image()
+      imagem.onload = () => {
+        const escala = Math.min(1, 900 / Math.max(imagem.width, imagem.height))
+        const canvas = document.createElement("canvas")
+        canvas.width = Math.max(1, Math.round(imagem.width * escala))
+        canvas.height = Math.max(1, Math.round(imagem.height * escala))
+        const contexto = canvas.getContext("2d")
+        if (!contexto) { setErro("Não foi possível processar a fotografia."); return }
+        contexto.drawImage(imagem, 0, 0, canvas.width, canvas.height)
+        const foto = canvas.toDataURL("image/jpeg", 0.78)
+        if (foto.length > 700000) { setErro("A fotografia processada ficou demasiado grande. Seleccione outra imagem."); return }
+        setFormulario(actual => ({ ...actual, foto }))
+        setErro("")
+      }
+      imagem.onerror = () => setErro("O ficheiro seleccionado não é uma imagem válida.")
+      imagem.src = String(leitor.result || "")
+    }
+    leitor.onerror = () => setErro("Não foi possível ler a fotografia seleccionada.")
+    leitor.readAsDataURL(ficheiro)
+  }
+
   function submeter(event) {
     event.preventDefault()
+    if (!window.confirm("Confirma a criação desta conta médica com os dados e a fotografia seleccionados?")) return
     setErro("")
     setCredenciais(null)
 
@@ -49,6 +79,7 @@ function CriarMedico() {
         )
       }
 
+      if (!formulario.foto) throw new Error("A fotografia do médico é obrigatória.")
       const resultado = criarMedicoComConta({
         ...formulario,
         especialidadeId: formulario.especialidadeId,
@@ -65,6 +96,7 @@ function CriarMedico() {
         email: "",
         sexo: "",
         especialidadeId: "",
+        foto: "",
       })
     } catch (error) {
       setErro(
@@ -290,6 +322,14 @@ function CriarMedico() {
             </fieldset>
 
             <div>
+              <label htmlFor="fotoMedico" className="mb-2 block text-sm font-medium text-gray-700">Fotografia do médico <span className="text-red-600">*</span></label>
+              <div className="flex flex-col gap-4 rounded-xl border border-dashed border-gray-300 p-4 sm:flex-row sm:items-center">
+                <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-400">{formulario.foto ? <img src={formulario.foto} alt="Pré-visualização da fotografia do médico" className="h-full w-full object-cover"/> : <span className="text-xs">Pré-visualização</span>}</div>
+                <div className="flex-1"><input id="fotoMedico" name="fotoMedico" type="file" accept="image/png,image/jpeg,image/webp" required={!formulario.foto} onChange={seleccionarFotografia} className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:font-semibold file:text-teal-800"/><p className="mt-2 text-xs text-gray-500">Obrigatória. JPG, PNG ou WebP; tamanho máximo 2 MB. A fotografia será apresentada no cartão público e no perfil do médico.</p>{formulario.foto && <button type="button" onClick={() => { if (window.confirm("Remover a fotografia seleccionada?")) setFormulario(actual => ({...actual, foto: ""})) }} className="mt-2 text-xs font-semibold text-red-700">Remover fotografia</button>}</div>
+              </div>
+            </div>
+
+            <div>
               <label
                 htmlFor="especialidadeId"
                 className="mb-1 block text-sm font-medium text-gray-700"
@@ -340,12 +380,7 @@ function CriarMedico() {
             </div>
 
             <div className="flex flex-wrap justify-end gap-3 pt-2">
-              <Link
-                to="/admin/contas-medicas"
-                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-              >
-                Cancelar
-              </Link>
+              <button type="button" onClick={() => { if (window.confirm("Cancelar a criação da conta médica? Os dados não guardados serão perdidos.")) navegar("/admin/contas-medicas") }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</button>
 
               <button
                 type="submit"

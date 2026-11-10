@@ -5,97 +5,6 @@ import {
 
 const CHAVE_MEDICOS = "medicos"
 
-const medicosIniciais = [
-  {
-    id: 1,
-    usuarioId: null,
-    nome: "Dr. Fulano",
-    especialidade: "Cardiologia",
-    especialidadeId: 1,
-    experiencia: "10 anos de experiência",
-    biografia:
-      "Atendimento e acompanhamento de doenças cardiovasculares.",
-    ativo: true,
-  },
-  {
-    id: 2,
-    usuarioId: null,
-    nome: "Dra. Maria",
-    especialidade: "Pediatria",
-    especialidadeId: 2,
-    experiencia: "12 anos de experiência",
-    biografia:
-      "Acompanhamento da saúde e desenvolvimento infantil.",
-    ativo: true,
-  },
-  {
-    id: 3,
-    usuarioId: null,
-    nome: "Dr. Joseppi Camole",
-    especialidade: "Dermatologia",
-    especialidadeId: 3,
-    experiencia: "7 anos de experiência",
-    biografia:
-      "Avaliação e acompanhamento da saúde da pele.",
-    ativo: true,
-  },
-  {
-    id: 4,
-    usuarioId: null,
-    nome: "Dra. Georgina",
-    especialidade: "Oftalmologia",
-    especialidadeId: 6,
-    experiencia: "8 anos de experiência",
-    biografia:
-      "Consultas de avaliação da saúde visual.",
-    ativo: true,
-  },
-  {
-    id: 5,
-    usuarioId: null,
-    nome: "Dr. Bernetti",
-    especialidade: "Cirurgia Geral",
-    especialidadeId: 7,
-    experiencia: "14 anos de experiência",
-    biografia:
-      "Avaliação clínica e orientação cirúrgica.",
-    ativo: true,
-  },
-  {
-    id: 6,
-    usuarioId: null,
-    nome: "Dra. Bernadete",
-    especialidade: "Neurologia",
-    especialidadeId: 5,
-    experiencia: "14 anos de experiência",
-    biografia:
-      "Avaliação e acompanhamento de condições neurológicas.",
-    ativo: true,
-  },
-  {
-    id: 7,
-    usuarioId: null,
-    nome: "Dr. Franklin Hernández",
-    especialidade: "Ortopedia",
-    especialidadeId: 4,
-    experiencia: "8 anos de experiência",
-    biografia:
-      "Avaliação e acompanhamento de condições ósseas.",
-    ativo: true,
-  },
-  {
-    id: 8,
-    usuarioId: null,
-    nome: "Dr. Nzola N`kuami",
-    especialidade: "Oftalmologia",
-    especialidadeId: 6,
-    experiencia: "11 anos de experiência",
-    biografia:
-      "Consultas de avaliação da saúde visual",
-    ativo: true,
-  },
-]
-
 export function obterMedicos() {
   try {
     const guardados = JSON.parse(
@@ -103,15 +12,18 @@ export function obterMedicos() {
     )
 
     if (Array.isArray(guardados)) {
-      return guardados
+      // Migração de demonstrações antigas: só permanecem perfis criados com conta real.
+      const perfisValidos = guardados.filter((medico) => medico && medico.usuarioId != null)
+      if (perfisValidos.length !== guardados.length) {
+        localStorage.setItem(CHAVE_MEDICOS, JSON.stringify(perfisValidos))
+      }
+      return perfisValidos
     }
   } catch {
     // Recupera os dados iniciais.
   }
 
-  guardarMedicos(medicosIniciais)
-
-  return medicosIniciais
+  return []
 }
 
 export function guardarMedicos(medicos) {
@@ -168,116 +80,6 @@ export function obterMedicoAutenticado() {
   return obterMedicoDaConta(
     usuario.id
   )
-}
-
-export function obterMedicosSemConta() {
-  return obterMedicos().filter(
-    (medico) =>
-      medico.usuarioId == null
-  )
-}
-
-export function obterMedicosComConta() {
-  return obterMedicos().filter(
-    (medico) =>
-      medico.usuarioId != null
-  )
-}
-
-export function associarContaAMedico(
-  medicoId,
-  usuarioId
-) {
-  if (usuarioId == null) {
-    throw new Error(
-      "É necessário indicar uma conta de utilizador."
-    )
-  }
-
-  const medicos =
-    obterMedicos()
-
-  const indiceMedico =
-    medicos.findIndex(
-      (medico) =>
-        String(medico.id) ===
-        String(medicoId)
-    )
-
-  if (indiceMedico === -1) {
-    throw new Error(
-      "Perfil médico não encontrado."
-    )
-  }
-
-  const medico =
-    medicos[indiceMedico]
-
-  const perfilDaConta =
-    medicos.find(
-      (item) =>
-        item.usuarioId != null &&
-        String(item.usuarioId) ===
-          String(usuarioId)
-    )
-
-  if (
-    perfilDaConta &&
-    String(perfilDaConta.id) !==
-      String(medicoId)
-  ) {
-    throw new Error(
-      "Esta conta já está associada a outro perfil médico."
-    )
-  }
-
-  if (
-    medico.usuarioId != null &&
-    String(medico.usuarioId) !==
-      String(usuarioId)
-  ) {
-    throw new Error(
-      "Este perfil médico já tem uma conta associada."
-    )
-  }
-
-  medicos[indiceMedico] = {
-    ...medico,
-    usuarioId,
-  }
-
-  guardarMedicos(medicos)
-
-  return medicos[indiceMedico]
-}
-
-export function desassociarContaDoMedico(
-  medicoId
-) {
-  const medicos =
-    obterMedicos()
-
-  const indice =
-    medicos.findIndex(
-      (medico) =>
-        String(medico.id) ===
-        String(medicoId)
-    )
-
-  if (indice === -1) {
-    throw new Error(
-      "Perfil médico não encontrado."
-    )
-  }
-
-  medicos[indice] = {
-    ...medicos[indice],
-    usuarioId: null,
-  }
-
-  guardarMedicos(medicos)
-
-  return medicos[indice]
 }
 
 export function actualizarPerfilMedico(
@@ -397,4 +199,12 @@ export function actualizarPerfilMedico(
   return medicos[indice]
 }
 
-export default medicosIniciais
+export function eliminarMedicoPorId(id) {
+  const medicos = obterMedicos()
+  const medico = medicos.find((item) => String(item.id) === String(id))
+  if (!medico) throw new Error("Médico não encontrado.")
+  guardarMedicos(medicos.filter((item) => String(item.id) !== String(id)))
+  return medico
+}
+
+export default obterMedicos

@@ -1,3 +1,4 @@
+import { registarAccaoAdmin } from "./auditoriaAdmin"
 
 /* src/data/administracao.js */
 
@@ -17,8 +18,6 @@ import {
 import {
   guardarMedicos,
   obterMedicos,
-  obterMedicoDaConta,
-  associarContaAMedico,
 } from "./medicos"
 
 import { obterPacientes } from "./paciente"
@@ -195,346 +194,6 @@ export function listarEstadoContasMedicas() {
           : null,
     }
   })
-}
-
-/**
- * Cria um novo perfil médico.
- *
- * Esta operação NÃO cria uma conta de acesso.
- * É utilizada quando o administrador precisa
- * criar um perfil novo sem associá-lo ainda
- * a uma conta.
- */
-export function criarPerfilMedico({
-  nome,
-  especialidade,
-  especialidadeId,
-  experiencia,
-  biografia,
-  ativo = true,
-}) {
-  exigirAdministrador()
-
-  const nomeFinal =
-    String(nome || "").trim()
-
-  const especialidadeFinal =
-    String(especialidade || "").trim()
-
-  if (!nomeFinal) {
-    throw new Error(
-      "O nome do médico é obrigatório."
-    )
-  }
-
-  if (!especialidadeFinal) {
-    throw new Error(
-      "A especialidade do médico é obrigatória."
-    )
-  }
-
-  const medicos = obterMedicos()
-
-  const novoMedico = {
-    id: gerarIdMedico(medicos),
-
-    usuarioId: null,
-
-    nome: nomeFinal,
-
-    especialidade:
-      especialidadeFinal,
-
-    especialidadeId:
-      especialidadeId ?? null,
-
-    experiencia:
-      String(experiencia || "").trim(),
-
-    biografia:
-      String(biografia || "").trim(),
-
-    ativo: Boolean(ativo),
-  }
-
-  const actualizados = [
-    ...medicos,
-    novoMedico,
-  ]
-
-  localStorage.setItem(
-    "medicos",
-    JSON.stringify(actualizados)
-  )
-
-  return novoMedico
-}
-
-/**
- * Cria a conta de acesso de um médico
- * e associa imediatamente essa conta
- * ao perfil médico seleccionado.
- */
-export function criarContaMedica({
-  medicoId,
-  nome,
-  email,
-  senha,
-}) {
-  const administrador =
-    exigirAdministrador()
-
-  if (medicoId == null) {
-    throw new Error(
-      "É necessário seleccionar um perfil médico."
-    )
-  }
-
-  const medicos = obterMedicos()
-
-  const medico =
-    medicos.find(
-      (item) =>
-        String(item.id) ===
-        String(medicoId)
-    )
-
-  if (!medico) {
-    throw new Error(
-      "Perfil médico não encontrado."
-    )
-  }
-
-  if (medico.usuarioId != null) {
-    throw new Error(
-      "Este médico já possui uma conta associada."
-    )
-  }
-
-  const nomeFinal =
-    String(nome || "").trim()
-
-  const emailFinal =
-    String(email || "")
-      .trim()
-      .toLowerCase()
-
-  const senhaFinal =
-    String(senha || "")
-
-  if (!nomeFinal) {
-    throw new Error(
-      "O nome é obrigatório."
-    )
-  }
-
-  if (!emailFinal) {
-    throw new Error(
-      "O email é obrigatório."
-    )
-  }
-
-  if (!senhaFinal) {
-    throw new Error(
-      "A palavra-passe é obrigatória."
-    )
-  }
-
-  if (senhaFinal.length < 8) {
-    throw new Error(
-      "A palavra-passe deve ter pelo menos 8 caracteres."
-    )
-  }
-
-  /*
-   * O nome da conta começa com o nome
-   * introduzido pelo administrador.
-   *
-   * O perfil médico continua a ser a
-   * referência profissional principal.
-   */
-  const novoUsuario =
-    criarUsuario({
-      nome: nomeFinal,
-      email: emailFinal,
-      senha: senhaFinal,
-      tipo: "medico",
-      ativo: false,
-
-      criadoPor: administrador.id,
-
-      criadoEm:
-        new Date().toISOString(),
-    })
-
-  try {
-    const medicoActualizado =
-      associarContaAMedico(
-        medico.id,
-        novoUsuario.id
-      )
-
-    return {
-      usuario: novoUsuario,
-      medico: medicoActualizado,
-    }
-  } catch {
-    /*
-     * Não removemos a conta aqui porque
-     * não existe uma operação de rollback
-     * de utilizadores neste momento.
-     *
-     * A conta fica identificada como
-     * "sem perfil" e poderá ser associada
-     * posteriormente pelo administrador.
-     */
-    throw new Error(
-      "A conta foi criada, mas não foi possível associá-la ao perfil médico."
-    )
-  }
-}
-
-/**
- * Associa uma conta médica já existente
- * a um perfil médico sem criar uma nova conta.
- *
- * Utilização administrativa excepcional:
- * quando já existe uma conta "medico"
- * sem perfil associado.
- */
-export function associarContaMedicaExistente(
-  usuarioId,
-  medicoId
-) {
-  exigirAdministrador()
-
-  if (usuarioId == null) {
-    throw new Error(
-      "É necessário seleccionar uma conta médica."
-    )
-  }
-
-  if (medicoId == null) {
-    throw new Error(
-      "É necessário seleccionar um perfil médico."
-    )
-  }
-
-  const usuario =
-    obterUsuarios().find(
-      (item) =>
-        String(item.id) ===
-        String(usuarioId)
-    )
-
-  if (!usuario) {
-    throw new Error(
-      "Conta de utilizador não encontrada."
-    )
-  }
-
-  if (
-    obterTipo(usuario) !==
-    "medico"
-  ) {
-    throw new Error(
-      "A conta seleccionada não é uma conta médica."
-    )
-  }
-
-  if (usuario.ativo === false) {
-    throw new Error(
-      "Não é possível associar uma conta médica desactivada."
-    )
-  }
-
-  const perfilExistente =
-    obterMedicoDaConta(usuario.id)
-
-  if (perfilExistente) {
-    throw new Error(
-      "Esta conta já está associada a um perfil médico."
-    )
-  }
-
-  const medicos = obterMedicos()
-
-  const medico =
-    medicos.find(
-      (item) =>
-        String(item.id) ===
-        String(medicoId)
-    )
-
-  if (!medico) {
-    throw new Error(
-      "Perfil médico não encontrado."
-    )
-  }
-
-  if (medico.usuarioId != null) {
-    throw new Error(
-      "Este perfil médico já possui uma conta associada."
-    )
-  }
-
-  return associarContaAMedico(
-    medico.id,
-    usuario.id
-  )
-}
-
-/**
- * Remove a associação entre uma conta
- * médica e o respectivo perfil.
- *
- * A conta não é eliminada.
- *
- * O perfil também não é eliminado.
- *
- * Consultas e disponibilidades continuam
- * ligadas ao mesmo medico.id.
- */
-export function desassociarContaMedica(
-  medicoId
-) {
-  exigirAdministrador()
-
-  const medicos = obterMedicos()
-
-  const indice =
-    medicos.findIndex(
-      (medico) =>
-        String(medico.id) ===
-        String(medicoId)
-    )
-
-  if (indice === -1) {
-    throw new Error(
-      "Perfil médico não encontrado."
-    )
-  }
-
-  const medico =
-    medicos[indice]
-
-  if (medico.usuarioId == null) {
-    throw new Error(
-      "Este perfil não possui uma conta associada."
-    )
-  }
-
-  medicos[indice] = {
-    ...medico,
-    usuarioId: null,
-  }
-
-  localStorage.setItem(
-    "medicos",
-    JSON.stringify(medicos)
-  )
-
-  return medicos[indice]
 }
 
 /**
@@ -730,6 +389,7 @@ export function criarMedicoComConta({
   email,
   sexo,
   especialidadeId,
+  foto,
 }) {
   const administrador = exigirAdministrador()
 
@@ -762,6 +422,9 @@ export function criarMedicoComConta({
       "Seleccione uma especialidade activa."
     )
   }
+  if (typeof foto !== "string" || !foto.startsWith("data:image/") || foto.length > 2800000) {
+    throw new Error("A fotografia é obrigatória e deve ser uma imagem válida até 2 MB.")
+  }
 
   const senhaInicial = gerarSenhaInicial()
   const medicosAntes = obterMedicos()
@@ -793,6 +456,7 @@ export function criarMedicoComConta({
       especialidadeId: especialidade.id,
       experiencia: "",
       biografia: "",
+      foto,
       ativo: true,
     }
 
@@ -800,6 +464,7 @@ export function criarMedicoComConta({
       ...medicosAntes,
       novoMedico,
     ])
+    registarAccaoAdmin("Conta médica criada", "médico", `${nomeFinal}; especialidade: ${especialidade.nome}; médico ID ${novoMedico.id}; utilizador ID ${novoUsuario.id}`)
 
     return {
       usuario: novoUsuario,
@@ -823,3 +488,25 @@ export function criarMedicoComConta({
 }
 
 
+
+
+/** Eliminação administrativa definitiva, apenas se não houver histórico associado. */
+export function eliminarContaMedica(medicoId) {
+  const administrador = exigirAdministrador()
+  const medicos = obterMedicos()
+  const medico = medicos.find(item => String(item.id) === String(medicoId))
+  if (!medico) throw new Error("Médico não encontrado.")
+  const consultas = obterConsultas()
+  const temConsultas = consultas.some(c => String(c.medicoId ?? c.medico_id ?? c.idMedico ?? "") === String(medico.id))
+  let registos = []
+  try { registos = JSON.parse(localStorage.getItem("registosClinicos") || "[]") } catch { registos = [] }
+  const temRegistos = registos.some(r => String(r.medicoId ?? r.medico_id ?? r.idMedico ?? "") === String(medico.id))
+  if (temConsultas || temRegistos) throw new Error("Esta conta já tem consultas ou registos clínicos associados. Por segurança, não pode ser eliminada definitivamente; desactive-a em vez disso.")
+  if (medico.usuarioId != null && String(medico.usuarioId) === String(administrador.id)) throw new Error("Não é permitido eliminar a conta administrativa principal.")
+  guardarMedicos(medicos.filter(item => String(item.id) !== String(medico.id)))
+  if (medico.usuarioId != null) guardarUsuarios(obterUsuarios().filter(u => String(u.id) !== String(medico.usuarioId)))
+  const disponibilidades = obterDisponibilidades().filter(d => String(d.medicoId ?? d.medico_id ?? "") !== String(medico.id))
+  localStorage.setItem("disponibilidades", JSON.stringify(disponibilidades))
+  registarAccaoAdmin("Conta médica eliminada definitivamente", "médico", `${medico.nome} (ID ${medico.id})`)
+  return medico
+}

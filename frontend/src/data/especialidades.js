@@ -3,18 +3,10 @@ import {
   obterUsuarioAutenticado,
   usuarioIsAdmin,
 } from "./usuarios"
+import { obterMedicos } from "./medicos"
+import { registarAccaoUtilizador } from "./auditoriaAdmin"
 
 const CHAVE_ESPECIALIDADES = "especialidades"
-
-const especialidadesIniciais = [
-  { id: 1, nome: "Cardiologia", descricao: "", ativo: true },
-  { id: 2, nome: "Pediatria", descricao: "", ativo: true },
-  { id: 3, nome: "Dermatologia", descricao: "", ativo: true },
-  { id: 4, nome: "Ortopedia", descricao: "", ativo: true },
-  { id: 5, nome: "Neurologia", descricao: "", ativo: true },
-  { id: 6, nome: "Oftalmologia", descricao: "", ativo: true },
-  { id: 7, nome: "Cirurgia Geral", descricao: "", ativo: true },
-]
 
 function exigirAdministrador() {
   const usuario = obterUsuarioAutenticado()
@@ -49,8 +41,7 @@ export function obterEspecialidades() {
     // Os dados serão inicializados abaixo.
   }
 
-  guardarEspecialidades(especialidadesIniciais)
-  return especialidadesIniciais
+  return []
 }
 
 export function guardarEspecialidades(especialidades) {
@@ -118,6 +109,7 @@ export function criarEspecialidade({ nome, descricao = "" }) {
     ...especialidades,
     novaEspecialidade,
   ])
+  registarAccaoUtilizador("Especialidade criada", "especialidade", `${nomeFinal} (ID ${novaEspecialidade.id})`)
 
   return novaEspecialidade
 }
@@ -168,6 +160,7 @@ export function actualizarEspecialidade(id, dados) {
 
   especialidades[indice] = actualizada
   guardarEspecialidades(especialidades)
+  registarAccaoUtilizador("Especialidade editada", "especialidade", `${actual.nome} → ${actualizada.nome} (ID ${id})`)
 
   return actualizada
 }
@@ -190,8 +183,23 @@ export function actualizarEstadoEspecialidade(id, ativo) {
   }
 
   guardarEspecialidades(especialidades)
+  registarAccaoUtilizador(ativo ? "Especialidade activada" : "Especialidade desactivada", "especialidade", `${especialidades[indice].nome} (ID ${id})`)
 
   return especialidades[indice]
 }
 
-export default especialidadesIniciais
+export function eliminarEspecialidade(id) {
+  exigirAdministrador()
+  const especialidades = obterEspecialidades()
+  const alvo = especialidades.find((item) => String(item.id) === String(id))
+  if (!alvo) throw new Error("Especialidade não encontrada.")
+  const medicos = obterMedicos()
+  if (medicos.some((medico) => String(medico.especialidadeId) === String(id))) {
+    throw new Error("Não é possível eliminar esta especialidade porque está atribuída a um ou mais médicos. Altere primeiro a especialidade desses médicos.")
+  }
+  guardarEspecialidades(especialidades.filter((item) => String(item.id) !== String(id)))
+  registarAccaoUtilizador("Especialidade eliminada", "especialidade", `${alvo.nome} (ID ${id})`)
+  return alvo
+}
+
+export default obterEspecialidades

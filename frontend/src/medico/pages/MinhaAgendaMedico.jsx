@@ -3,6 +3,8 @@ import { Link } from "react-router-dom"
 
 import { obterMedicoAutenticado } from "../../data/medicos"
 import { obterConsultasDoMedico } from "../../data/consultas"
+import { registarAccaoUtilizador } from "../../data/auditoriaAdmin"
+import { exportarCSV, exportarPDF } from "../../utils/exportacaoAdmin"
 
 function obterDataHoje() {
   const hoje = new Date()
@@ -271,6 +273,29 @@ function MinhaAgendaMedico() {
         "Cancelada"
     ).length
 
+  const cabecalhosExportacao = ["Data", "Hora", "Paciente", "Email", "Motivo", "Estado"]
+  const linhasExportacao = consultasFiltradas.map((consulta) => [
+    formatarData(consulta.data), consulta.horario || "", consulta.pacienteNome || "",
+    consulta.pacienteEmail || "", consulta.motivo || "", consulta.estado || "",
+  ])
+
+  function exportarAgenda(formato) {
+    if (!consultasFiltradas.length) {
+      window.alert("Não existem consultas para exportar com os filtros actuais.")
+      return
+    }
+    try {
+      if (formato === "csv") {
+        exportarCSV("agenda-medica-wenji-maka.csv", cabecalhosExportacao, linhasExportacao)
+      } else {
+        exportarPDF("Agenda médica — Wenji Maka", `Agenda de ${medico?.nome || "médico"}; exportação das consultas filtradas`, cabecalhosExportacao, linhasExportacao, "agenda-medica")
+      }
+      registarAccaoUtilizador("Agenda exportada", "agenda médica", `Formato ${formato.toUpperCase()}; ${linhasExportacao.length} consulta(s) exportada(s)`) 
+    } catch (error) {
+      window.alert(error.message || "Não foi possível exportar a agenda.")
+    }
+  }
+
   return (
     <main className="min-h-[70vh] bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -291,6 +316,10 @@ function MinhaAgendaMedico() {
           <p className="mt-2 text-gray-600">
             Consulte e acompanhe as suas consultas.
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={() => exportarAgenda("csv")} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Exportar CSV</button>
+            <button type="button" onClick={() => exportarAgenda("pdf")} className="rounded-lg bg-primaria px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primaria-hover">Exportar PDF</button>
+          </div>
         </div>
 
         {/* Estatísticas */}
