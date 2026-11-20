@@ -1,6 +1,6 @@
 
-import { prisma } from "../config/prisma";
-import { HttpError } from "../utils/http";
+const { prisma } = require("../config/prisma");
+const { HttpError } = require("../utils/http");
 
 const FUSO_HORARIO = "Africa/Luanda";
 
