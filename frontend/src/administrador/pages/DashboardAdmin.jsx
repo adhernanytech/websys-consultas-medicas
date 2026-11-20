@@ -2,11 +2,10 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
 import {
-  obterResumoAdministrativo,
-  listarEstadoContasMedicas,
-} from "../../data/administracao"
-
-import { obterConsultas } from "../../data/consultas"
+  adminAPI,
+  consultasAPI,
+  medicosAPI,
+} from "../../services/api"
 
 function formatarData(data) {
   if (!data) return "Data não disponível"
@@ -49,20 +48,21 @@ function DashboardAdmin() {
     useState(null)
 
   const [medicos, setMedicos] = useState([])
+  const [consultas, setConsultas] = useState([])
 
   const [erro, setErro] = useState("")
 
-  function carregar() {
+  async function carregar() {
     try {
       setErro("")
-
-      setResumo(
-        obterResumoAdministrativo()
-      )
-
-      setMedicos(
-        listarEstadoContasMedicas()
-      )
+      const [dashboardResponse, consultasResponse, medicosResponse] = await Promise.all([
+        adminAPI.dashboard(),
+        consultasAPI.listar(),
+        medicosAPI.listar(),
+      ])
+      setResumo(dashboardResponse.data.dados)
+      setConsultas(consultasResponse.data.dados || [])
+      setMedicos((medicosResponse.data.dados || []).map((medico) => ({ ...medico, temConta: true })))
     } catch (error) {
       setErro(
         error?.message ||
@@ -72,7 +72,7 @@ function DashboardAdmin() {
   }
 
   useEffect(() => {
-    carregar()
+    Promise.resolve().then(carregar)
   }, [])
 
   if (!resumo && erro) {
@@ -110,9 +110,6 @@ function DashboardAdmin() {
       </main>
     )
   }
-
-  const consultas =
-    obterConsultas()
 
   const proximasConsultas =
     [...consultas]

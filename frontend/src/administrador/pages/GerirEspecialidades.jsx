@@ -2,12 +2,8 @@
 import { useEffect, useState } from "react"
 
 import {
-  obterEspecialidades,
-  criarEspecialidade,
-  actualizarEspecialidade,
-  actualizarEstadoEspecialidade,
-  eliminarEspecialidade,
-} from "../../data/especialidades"
+  especialidadesAPI,
+} from "../../services/api"
 import AppIcon from "../../components/ui/AppIcon"
 
 const formularioInicial = {
@@ -22,12 +18,13 @@ function GerirEspecialidades() {
   const [mensagem, setMensagem] = useState("")
   const [erro, setErro] = useState("")
 
-  function recarregar() {
-    setEspecialidades(obterEspecialidades())
+  async function recarregar() {
+    const { data } = await especialidadesAPI.listar({ incluirInactivas: true })
+    setEspecialidades(data.dados || [])
   }
 
   useEffect(() => {
-    recarregar()
+    Promise.resolve().then(recarregar).catch((error) => setErro(error.message || "Não foi possível carregar especialidades."))
   }, [])
 
   function limparMensagens() {
@@ -35,23 +32,23 @@ function GerirEspecialidades() {
     setErro("")
   }
 
-  function submeter(event) {
+  async function submeter(event) {
     event.preventDefault()
     limparMensagens()
 
     if (!window.confirm(editandoId !== null ? "Confirma que pretende guardar as alterações desta especialidade?" : "Confirma a criação desta especialidade?")) return
     try {
       if (editandoId !== null) {
-        actualizarEspecialidade(editandoId, formulario)
+        await especialidadesAPI.actualizar(editandoId, formulario)
         setMensagem("Especialidade actualizada com sucesso.")
       } else {
-        criarEspecialidade(formulario)
+        await especialidadesAPI.criar(formulario)
         setMensagem("Especialidade criada com sucesso.")
       }
 
       setFormulario(formularioInicial)
       setEditandoId(null)
-      recarregar()
+      await recarregar()
     } catch (error) {
       setErro(
         error?.message ||
@@ -76,16 +73,17 @@ function GerirEspecialidades() {
     limparMensagens()
   }
 
-  function alterarEstado(especialidade) {
+  async function alterarEstado(especialidade) {
     const acao = especialidade.ativo === false ? "activar" : "desactivar"
     if (!window.confirm(`Confirma que pretende ${acao} a especialidade ${especialidade.nome}?`)) return
     limparMensagens()
 
     try {
-      actualizarEstadoEspecialidade(
-        especialidade.id,
-        especialidade.ativo === false
-      )
+      await especialidadesAPI.actualizar(especialidade.id, {
+        nome: especialidade.nome,
+        descricao: especialidade.descricao || "",
+        ativo: especialidade.ativo === false,
+      })
 
       setMensagem(
         especialidade.ativo === false
@@ -93,7 +91,7 @@ function GerirEspecialidades() {
           : "Especialidade desactivada."
       )
 
-      recarregar()
+      await recarregar()
     } catch (error) {
       setErro(
         error?.message ||
@@ -102,9 +100,9 @@ function GerirEspecialidades() {
     }
   }
 
-  function eliminar(especialidade) {
+  async function eliminar(especialidade) {
     if (!window.confirm(`Eliminar definitivamente a especialidade ${especialidade.nome}? Esta operação não pode ser anulada.`)) return
-    try { eliminarEspecialidade(especialidade.id); setMensagem("Especialidade eliminada."); setErro(""); recarregar() }
+    try { await especialidadesAPI.actualizar(especialidade.id, { nome: especialidade.nome, descricao: especialidade.descricao || "", ativo: false }); setMensagem("Especialidade desactivada para preservar o histórico associado."); setErro(""); await recarregar() }
     catch (error) { setErro(error?.message || "Não foi possível eliminar a especialidade."); setMensagem("") }
   }
 

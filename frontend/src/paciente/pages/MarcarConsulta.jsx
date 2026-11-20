@@ -1,52 +1,59 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useNavigate,
   useParams,
   useLocation,
 } from "react-router-dom";
-
-import { obterMedicos } from "../../data/medicos";
-import {
-  obterDisponibilidadesDoMedico,
-} from "../../data/disponibilidades";
-import { criarConsulta } from "../../data/consultas";
-import { obterUsuarioAutenticado, obterUsuarioPorId } from "../../data/usuarios";
+import { useAuth } from "../../context/AuthContext";
+import { disponibilidadesAPI, medicosAPI, consultasAPI } from "../../services/api";
 
 export default function MarcarConsulta() {
   const { medicoId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { usuario } = useAuth();
 
-  const perfilMedico = obterMedicos().find(
-    (item) => String(item.id) === String(medicoId)
-  );
-  const contaMedico = perfilMedico ? obterUsuarioPorId(perfilMedico.usuarioId) : null;
-  const medico = contaMedico && contaMedico.ativo !== false ? perfilMedico : null;
-
+  const [medico, setMedico] = useState(null);
+  const [carregandoDados, setCarregandoDados] = useState(true);
   const [disponibilidadeId, setDisponibilidadeId] = useState("");
   const [motivo, setMotivo] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
   const [aGuardar, setAGuardar] = useState(false);
+  const [disponibilidades, setDisponibilidades] = useState([]);
   const [atualizacao, setAtualizacao] = useState(0);
 
-  const disponibilidades = useMemo(() => {
-    if (!medico) return [];
-
-    return obterDisponibilidadesDoMedico(medico.id);
-  }, [medico, atualizacao]);
-
   useEffect(() => {
-    if (
-      disponibilidadeId &&
-      !disponibilidades.some(
-        (item) => String(item.id) === String(disponibilidadeId)
-      )
-    ) {
-      setDisponibilidadeId("");
-    }
-  }, [disponibilidades]);
+    let activo = true;
+    const carregar = medicoId
+      ? medicosAPI.obter(medicoId).then(({ data }) => data.dados)
+      : Promise.resolve(null);
+    carregar
+      .then(async (perfil) => {
+        if (!activo) return;
+        setMedico(perfil);
+        if (!perfil) {
+          setDisponibilidades([]);
+          return;
+        }
+        const { data } = await disponibilidadesAPI.listar({ medico_id: perfil.id });
+        if (activo) setDisponibilidades(data.dados || []);
+      })
+      .catch((error) => {
+        if (activo) setErro(error.message || "Não foi possível carregar médico e horários.");
+      })
+      .finally(() => { if (activo) setCarregandoDados(false); });
+    return () => { activo = false; };
+  }, [medicoId, atualizacao]);
+
+  const disponibilidadeValida = disponibilidades.some(
+    (item) => String(item.id) === String(disponibilidadeId)
+  )
+
+  if (carregandoDados) {
+    return <main className="mx-auto max-w-3xl p-6 text-texto-secundario">A carregar médico e horários disponíveis...</main>;
+  }
 
   if (!medico) {
     return (
@@ -66,13 +73,13 @@ export default function MarcarConsulta() {
     );
   }
 
-  function submeterFormulario(event) {
+  async function submeterFormulario(event) {
   event.preventDefault();
 
   setErro("");
   setMensagem("");
 
-  const paciente = obterUsuarioAutenticado();
+  const paciente = usuario;
 
   if (!paciente) {
     navigate("/login", {
@@ -89,7 +96,7 @@ export default function MarcarConsulta() {
     return;
   }
 
-  if (!disponibilidadeId) {
+  if (!disponibilidadeValida) {
     setErro("Seleccione uma data e um horário.");
     return;
   }
@@ -109,18 +116,9 @@ export default function MarcarConsulta() {
   setAGuardar(true);
 
   try {
-    criarConsulta({
-      pacienteId: paciente.id,
-      pacienteNome: paciente.nome,
-      pacienteEmail: paciente.email,
-
-      // IMPORTANTE: estava a faltar
-      medicoId: medico.id,
-      medicoNome: medico.nome,
-      especialidade: medico.especialidade,
-
-      disponibilidadeId,
-      motivo,
+    await consultasAPI.marcar({
+      disponibilidade_id: String(disponibilidadeId),
+      motivo: motivo.trim(),
     });
 
     setMensagem("Consulta marcada com sucesso!");
@@ -208,7 +206,7 @@ export default function MarcarConsulta() {
             ) : (
               <select
                 id="disponibilidade"
-                value={disponibilidadeId}
+                value={disponibilidadeValida ? disponibilidadeId : ""}
                 onChange={(event) =>
                   setDisponibilidadeId(event.target.value)
                 }
@@ -264,7 +262,7 @@ export default function MarcarConsulta() {
             disabled={
               aGuardar ||
               disponibilidades.length === 0 ||
-              !disponibilidadeId
+              !disponibilidadeValida
             }
             className="w-full rounded-lg bg-primaria px-5 py-3 font-semibold text-white hover:bg-primaria-hover disabled:cursor-not-allowed disabled:opacity-50"
           >

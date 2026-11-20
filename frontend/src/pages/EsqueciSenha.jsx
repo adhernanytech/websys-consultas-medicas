@@ -1,5 +1,5 @@
 // src/pages/EsqueciSenha.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppIcon from '../components/ui/AppIcon';
 

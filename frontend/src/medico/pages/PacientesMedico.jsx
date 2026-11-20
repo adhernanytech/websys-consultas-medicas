@@ -1,9 +1,7 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 
-import { obterMedicoAutenticado } from "../../data/medicos"
-import { obterConsultasDoMedico } from "../../data/consultas"
-import { obterUsuarios } from "../../data/usuarios"
+import { consultasAPI, medicosAPI } from "../../services/api"
 
 function formatarData(data) {
   if (!data) return "Data não disponível"
@@ -13,38 +11,44 @@ function formatarData(data) {
 }
 
 function PacientesMedico() {
-  const medico = obterMedicoAutenticado()
+  const [medico, setMedico] = useState(null)
+  const [consultas, setConsultas] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState("")
   const medicoId = medico?.id
   const [pesquisa, setPesquisa] = useState("")
 
+  useEffect(() => {
+    let activo = true
+    Promise.all([medicosAPI.obterMeu(), consultasAPI.listar()])
+      .then(([medicoResponse, consultasResponse]) => {
+        if (!activo) return
+        setMedico(medicoResponse.data.dados)
+        setConsultas(consultasResponse.data.dados || [])
+      })
+      .catch((errorApi) => {
+        if (activo) setErro(errorApi.message || "Não foi possível carregar os pacientes.")
+      })
+      .finally(() => {
+        if (activo) setCarregando(false)
+      })
+    return () => { activo = false }
+  }, [])
+
   const pacientes = useMemo(() => {
     if (medicoId == null) return []
-
-    const consultas = obterConsultasDoMedico(medicoId)
-    const usuarios = obterUsuarios()
-    const usuariosPorId = new Map(
-      usuarios.map((usuario) => [String(usuario.id), usuario])
-    )
     const porId = new Map()
 
     consultas.forEach((consulta) => {
       if (consulta.pacienteId == null) return
 
       const id = String(consulta.pacienteId)
-      const usuario = usuariosPorId.get(id)
-      const utilizadorPaciente =
-        usuario?.tipo === "paciente" || usuario?.role === "paciente"
-      const utilizadorValido = utilizadorPaciente ? usuario : null
       const registo = porId.get(id) || {
         id: consulta.pacienteId,
-        nome: utilizadorValido?.nome || consulta.pacienteNome || "Paciente",
-        email: utilizadorValido?.email || consulta.pacienteEmail || "",
-        telefone: utilizadorValido?.telefone || "",
-        fotografia:
-          utilizadorValido?.foto ||
-          utilizadorValido?.fotografia ||
-          utilizadorValido?.imagem ||
-          null,
+        nome: consulta.pacienteNome || "Paciente",
+        email: consulta.pacienteEmail || "",
+        telefone: consulta.pacienteTelefone || "",
+        fotografia: null,
         consultas: [],
       }
 
@@ -62,7 +66,7 @@ function PacientesMedico() {
         ),
       }))
       .sort((a, b) => a.nome.localeCompare(b.nome, "pt"))
-  }, [medicoId])
+  }, [medicoId, consultas])
 
   const pacientesFiltrados = pacientes.filter((paciente) => {
     const termo = pesquisa.trim().toLocaleLowerCase("pt")
@@ -76,6 +80,9 @@ function PacientesMedico() {
   })
 
   if (!medico) {
+    if (carregando) {
+      return <main className="mx-auto max-w-3xl px-4 py-12 text-center text-gray-600">A carregar pacientes...</main>
+    }
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
@@ -83,7 +90,7 @@ function PacientesMedico() {
             Perfil médico não associado
           </h1>
           <p className="mt-2 text-texto-secundario">
-            Não foi possível carregar a lista de pacientes desta conta.
+            {erro || "Não foi possível carregar a lista de pacientes desta conta."}
           </p>
         </section>
       </main>

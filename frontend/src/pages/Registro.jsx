@@ -1,12 +1,6 @@
-import { registarAccaoUtilizador } from "../data/auditoriaAdmin";
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
-
-import {
-  obterUsuarios,
-  criarUsuario,
-  guardarUsuarioAutenticado,
-} from "../data/usuarios";
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext";
 
 import { prepararImagem } from "../utils/imagem"
 import AppIcon from "../components/ui/AppIcon"
@@ -14,6 +8,7 @@ import AppIcon from "../components/ui/AppIcon"
 function Registro() {
 
   const navegar = useNavigate()
+  const { registar, login } = useAuth()
 
   const [formulario, setFormulario] = useState({
     nome: "",
@@ -23,7 +18,6 @@ function Registro() {
     confirmarSenha: ""
   })
 
-  const [foto, setFoto] = useState(null)
   const [previsualizacaoFoto, setPrevisualizacaoFoto] = useState("")
 
   const [mostrarSenha, setMostrarSenha] = useState(false)
@@ -76,7 +70,6 @@ function Registro() {
       const imagemPreparada =
         await prepararImagem(ficheiro)
 
-      setFoto(ficheiro)
       setPrevisualizacaoFoto(imagemPreparada)
 
       setMensagem("")
@@ -96,7 +89,6 @@ function Registro() {
 
   function removerFoto() {
 
-    setFoto(null)
     setPrevisualizacaoFoto("")
 
     const campoFoto =
@@ -164,9 +156,9 @@ function Registro() {
       return
     }
 
-    if (formulario.senha.length < 6) {
+    if (formulario.senha.length < 12) {
       setMensagem(
-        "A palavra-passe deve ter pelo menos 6 caracteres."
+        "A palavra-passe deve ter pelo menos 12 caracteres."
       )
       setTipoMensagem("erro")
       return
@@ -199,26 +191,6 @@ function Registro() {
       return
     }
 
-    const emailNormalizado =
-      formulario.email.trim().toLowerCase()
-
-    const usuariosExistentes = obterUsuarios()
-
-    const emailJaExiste =
-      usuariosExistentes.some(
-        (usuario) =>
-          usuario.email.toLowerCase() ===
-          emailNormalizado
-      )
-
-    if (emailJaExiste) {
-      setMensagem(
-        "Já existe uma conta associada a este email."
-      )
-      setTipoMensagem("erro")
-      return
-    }
-
     setCarregando(true)
 
     setMensagem(
@@ -228,21 +200,13 @@ function Registro() {
     setTipoMensagem("sucesso")
 
     try {
-      const novoUsuario = criarUsuario({
+      await registar({
         nome: formulario.nome.trim(),
         email: formulario.email.trim().toLowerCase(),
         telefone: formulario.telefone.trim(),
         senha: formulario.senha,
-        tipo: "paciente",
-        role: "paciente",
-        foto: previsualizacaoFoto || null,
-        ativo: true,
-        aceitouTermos: true,
-        criadoEm: new Date().toISOString(),
       });
-
-      guardarUsuarioAutenticado(novoUsuario);
-      registarAccaoUtilizador("Conta criada", "conta de paciente", `Registo público concluído; utilizador ID ${novoUsuario.id}`);
+      await login(formulario.email.trim().toLowerCase(), formulario.senha);
 
       setMensagem("Conta criada com sucesso!");
       setTipoMensagem("sucesso");
@@ -252,10 +216,8 @@ function Registro() {
       }, 800);
     } catch (erro) {
 
-      console.error(erro)
-
       setMensagem(
-        "Ocorreu um erro ao criar a conta."
+        erro.message || "Ocorreu um erro ao criar a conta."
       )
 
       setTipoMensagem("erro")

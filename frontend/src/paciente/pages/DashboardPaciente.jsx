@@ -1,9 +1,8 @@
+import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { obterUsuarioAutenticado } from "../../data/usuarios"
-import { obterConsultasDoPaciente } from "../../data/consultas"
-import { obterNotificacoesPaciente } from "../../data/notificacoesPaciente"
-import { useStorageSync } from "../../hooks/useStorageSync"
+import { useAuth } from "../../context/AuthContext"
 import AppIcon from "../../components/ui/AppIcon"
+import { consultasAPI, notificacoesAPI } from "../../services/api"
 
 function formatarData(data, horario) {
   if (!data) return "Data por definir"
@@ -22,26 +21,49 @@ function Resumo({ titulo, valor, descricao, icon, href }) {
 
 export default function DashboardPaciente() {
   const navegar = useNavigate()
-  useStorageSync("consultas")
-  useStorageSync("registosClinicos")
-  const usuario = obterUsuarioAutenticado()
+  const { usuario } = useAuth()
+  const [consultas, setConsultas] = useState([])
+  const [notificacoes, setNotificacoes] = useState([])
+  const [erro, setErro] = useState("")
+  const [carregando, setCarregando] = useState(true)
+  const [agora, setAgora] = useState(0)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setAgora(Date.now()), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    if (!usuario) return
+    let activo = true
+    Promise.all([consultasAPI.listar(), notificacoesAPI.listar()])
+      .then(([consultasResponse, notificacoesResponse]) => {
+        if (!activo) return
+        setConsultas((consultasResponse.data.dados || []).filter(
+          (consulta) => String(consulta.pacienteId) === String(usuario.id)
+        ))
+        setNotificacoes(notificacoesResponse.data.dados || [])
+      })
+      .catch((error) => { if (activo) setErro(error.message || "Não foi possível carregar o dashboard.") })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [usuario])
 
   if (!usuario) { navegar("/login", { replace: true }); return null }
   if ((usuario.tipo || usuario.role) !== "paciente") { navegar("/", { replace: true }); return null }
   if (usuario.ativo === false) { navegar("/login", { replace: true }); return null }
 
-  const consultas = obterConsultasDoPaciente(usuario.id)
-  const agora = Date.now()
   const futuras = consultas.filter((consulta) => ["Agendada", "Confirmada"].includes(consulta.estado) && new Date(`${consulta.data}T${consulta.horario || "00:00"}:00`).getTime() >= agora).sort((a, b) => `${a.data} ${a.horario || ""}`.localeCompare(`${b.data} ${b.horario || ""}`))
   const realizadas = consultas.filter((consulta) => ["Concluída", "Realizada"].includes(consulta.estado))
   const canceladas = consultas.filter((consulta) => consulta.estado === "Cancelada")
-  const notificacoes = obterNotificacoesPaciente(usuario.id)
   const naoLidas = notificacoes.filter((item) => !item.lida).length
   const proxima = futuras[0]
   const perfilCompleto = Boolean(usuario.nome && usuario.email && usuario.telefone)
   const iniciais = String(usuario.nome || "P").trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase()
 
   return <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    {erro && <div role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{erro}</div>}
+    {carregando && <p role="status" className="mb-4 text-sm text-gray-600">A carregar dados...</p>}
     <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--cor-primaria,#145a72)] to-slate-800 p-6 text-white shadow-lg sm:p-8">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">

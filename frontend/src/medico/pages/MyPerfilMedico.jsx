@@ -1,19 +1,12 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { prepararImagem } from "../../utils/imagem"
-import { registarAccaoUtilizador } from "../../data/auditoriaAdmin"
-
-import {
-  obterUsuarioAutenticado,
-} from "../../data/usuarios"
-
-import {
-  obterMedicoDaConta,
-  actualizarPerfilMedico,
-} from "../../data/medicos"
+import { useAuth } from "../../context/AuthContext"
+import { medicosAPI } from "../../services/api"
 
 function PerfilMedico() {
   const [medicoActualizado, setMedicoActualizado] = useState(null)
+  const [carregando, setCarregando] = useState(true)
   const [modoEdicao, setModoEdicao] = useState(false)
   const [formulario, setFormulario] = useState({
     telefone: "",
@@ -24,12 +17,18 @@ function PerfilMedico() {
   const [sucesso, setSucesso] = useState("")
   const [processandoFoto, setProcessandoFoto] = useState(false)
 
-  const usuario = obterUsuarioAutenticado()
-
-  const medicoAssociado = usuario
-    ? obterMedicoDaConta(usuario.id)
-    : null
+  const { usuario } = useAuth()
+  const [medicoAssociado, setMedicoAssociado] = useState(null)
   const medico = medicoActualizado || medicoAssociado
+
+  useEffect(() => {
+    let activo = true
+    medicosAPI.obterMeu()
+      .then(({ data }) => { if (activo) setMedicoAssociado(data.dados) })
+      .catch(() => { if (activo) setMedicoAssociado(null) })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [])
 
   function iniciarEdicao() {
     setFormulario({
@@ -74,27 +73,28 @@ function PerfilMedico() {
     }
   }
 
-  function guardarPerfil(event) {
+  async function guardarPerfil(event) {
     event.preventDefault()
     setErro("")
     setSucesso("")
 
     try {
-      const actualizado = actualizarPerfilMedico(
-        medico.id,
-        usuario.id,
-        formulario
-      )
+      const { data } = await medicosAPI.actualizarMeu({
+        telefone: formulario.telefone,
+        biografia: formulario.biografia,
+        fotografia_url: formulario.foto,
+      })
+      const actualizado = { ...medico, ...data.dados }
       setMedicoActualizado(actualizado)
-      registarAccaoUtilizador("Perfil profissional actualizado", "perfil médico", `Médico ID ${actualizado.id}; dados profissionais, contactos ou fotografia actualizados`)
       setModoEdicao(false)
       setSucesso("Perfil actualizado com sucesso.")
     } catch (error) {
-      setErro(
-        error.message ||
-          "Não foi possível actualizar o perfil."
-      )
+      setErro(error.message || "Não foi possível actualizar o perfil.")
     }
+  }
+
+  if (carregando) {
+    return <main className="min-h-[70vh] px-4 py-12 text-center text-gray-600">A carregar perfil...</main>
   }
 
   if (!usuario || !medico) {

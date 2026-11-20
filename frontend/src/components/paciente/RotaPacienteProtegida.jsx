@@ -1,9 +1,9 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom"
-import { obterUsuarioAutenticado } from "../../data/usuarios"
+import { useAuth } from "../../context/AuthContext"
 
 export default function RotaPacienteProtegida() {
   const location = useLocation()
-  const usuario = obterUsuarioAutenticado()
+  const { usuario } = useAuth()
   const tipo = String(usuario?.tipo || usuario?.role || "").toLowerCase()
 
   if (!usuario) {

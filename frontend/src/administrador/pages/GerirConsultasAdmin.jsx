@@ -1,13 +1,12 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import PageHeader from "../../components/ui/PageHeader"
 import StatusBadge from "../../components/ui/StatusBadge"
 import EmptyState from "../../components/ui/EmptyState"
-import { obterConsultas, guardarConsultas } from "../../data/consultas"
-import { obterDisponibilidades, guardarDisponibilidades } from "../../data/disponibilidades"
 import { registarAccaoAdmin } from "../../data/auditoriaAdmin"
 import { exportarCSV, exportarPDF } from "../../utils/exportacaoAdmin"
+import { consultasAPI } from "../../services/api"
 
-const ESTADOS = ["Agendada", "Confirmada", "Realizada", "Cancelada", "Falta"]
+const ESTADOS = ["Agendada", "Confirmada", "Concluída", "Cancelada"]
 const formatarData = (data) => {
   if (!data) return "—"
   const [a,m,d] = String(data).split("-")
@@ -15,7 +14,8 @@ const formatarData = (data) => {
 }
 
 function GerirConsultasAdmin() {
-  const [consultas, setConsultas] = useState(() => obterConsultas())
+  const [consultas, setConsultas] = useState([])
+  const [carregando, setCarregando] = useState(true)
   const [pesquisa, setPesquisa] = useState("")
   const [estado, setEstado] = useState("todos")
   const [dataDe, setDataDe] = useState("")
@@ -32,26 +32,34 @@ function GerirConsultasAdmin() {
     }).sort((a,b) => `${b.data || ""} ${b.horario || ""}`.localeCompare(`${a.data || ""} ${a.horario || ""}`))
   }, [consultas, pesquisa, estado, dataDe, dataAte])
 
-  function recarregar() { setConsultas(obterConsultas()); setMensagem(""); setErro("") }
-  function alterarEstado(consulta, novoEstado) {
+  async function recarregar() {
+    try {
+      const { data } = await consultasAPI.listar()
+      setConsultas(data.dados || [])
+      setMensagem("")
+      setErro("")
+    } catch (error) {
+      setErro(error.message || "Não foi possível carregar as consultas.")
+    } finally {
+      setCarregando(false)
+    }
+  }
+  useEffect(() => { Promise.resolve().then(recarregar) }, [])
+
+  async function alterarEstado(consulta, novoEstado) {
     setErro(""); setMensagem("")
     if (consulta.estado === novoEstado) return
-    if (consulta.estado === "Cancelada" || consulta.estado === "Realizada" || consulta.estado === "Falta") {
+    if (consulta.estado === "Cancelada" || consulta.estado === "Concluída" || consulta.estado === "Realizada") {
       setErro("Esta consulta já está num estado final e não pode ser alterada por esta página.")
       return
     }
-    const verbo = novoEstado === "Cancelada" ? "cancelar" : "confirmar"
+    const verbo = novoEstado === "Cancelada" ? "cancelar" : novoEstado === "Concluída" ? "concluir" : "confirmar"
     if (!window.confirm(`Confirma que pretende ${verbo} a consulta de ${consulta.pacienteNome || "paciente"} com ${consulta.medicoNome || "médico"}?`)) return
     try {
-      const actualizadas = obterConsultas().map((c) => String(c.id) === String(consulta.id) ? { ...c, estado: novoEstado, actualizadaEm: new Date().toISOString(), actualizadoPor: "admin", ...(novoEstado === "Cancelada" ? { canceladaEm: new Date().toISOString(), canceladaPor: "admin" } : {}) } : c)
-      guardarConsultas(actualizadas)
-      if (novoEstado === "Cancelada" && consulta.disponibilidadeId != null) {
-        const disponibilidades = obterDisponibilidades()
-        const dispon = disponibilidades.find((d) => String(d.id) === String(consulta.disponibilidadeId))
-        if (dispon) guardarDisponibilidades(disponibilidades.map((d) => String(d.id) === String(dispon.id) ? { ...d, estado: "Disponível" } : d))
-      }
+      const estadoApi = { "Agendada": "pendente", "Confirmada": "confirmada", "Concluída": "concluida", "Cancelada": "cancelada" }[novoEstado]
+      await consultasAPI.alterarEstado(consulta.id, estadoApi)
       registarAccaoAdmin(`Estado da consulta alterado para ${novoEstado}`, "consulta", `Consulta ${consulta.id}; paciente: ${consulta.pacienteNome || consulta.pacienteId}; médico: ${consulta.medicoNome || consulta.medicoId}`)
-      setConsultas(obterConsultas())
+      await recarregar()
       setMensagem(`Consulta ${consulta.id}: estado actualizado para «${novoEstado}».`)
     } catch (e) { setErro(e?.message || "Não foi possível actualizar a consulta.") }
   }
@@ -61,7 +69,8 @@ function GerirConsultasAdmin() {
   function pdf() { try { exportarPDF("Gestão de consultas", "Listagem administrativa de consultas", cabecalhos, linhas, "consultas") } catch(e) { setErro(e.message) } }
 
   return <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-    <PageHeader eyebrow="Administração" title="Gestão de consultas" description="Pesquisar, acompanhar e gerir os estados das marcações. As alterações são guardadas localmente nesta fase do projecto." actions={<><button onClick={recarregar} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50">Actualizar</button><button onClick={() => exportarCSV("consultas-administrativas.csv", cabecalhos, linhas)} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50">Exportar CSV</button><button onClick={pdf} className="rounded-lg bg-primaria px-4 py-2.5 text-sm font-semibold text-white hover:bg-primaria-hover">Exportar PDF</button></>} />
+    <PageHeader eyebrow="Administração" title="Gestão de consultas" description="Pesquisar, acompanhar e gerir as marcações guardadas no sistema." actions={<><button onClick={recarregar} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50">Actualizar</button><button onClick={() => exportarCSV("consultas-administrativas.csv", cabecalhos, linhas)} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-gray-50">Exportar CSV</button><button onClick={pdf} className="rounded-lg bg-primaria px-4 py-2.5 text-sm font-semibold text-white hover:bg-primaria-hover">Exportar PDF</button></>} />
+    {carregando && <p role="status" className="mb-4 text-sm text-gray-600">A carregar consultas...</p>}
     {mensagem && <p role="status" className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{mensagem}</p>}
     {erro && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{erro}</p>}
     <section className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,17 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AppIcon from "../../components/ui/AppIcon";
 
-import {
-  obterMedicoAutenticado,
-} from "../../data/medicos";
-
-import {
-  obterAgendaDoMedico,
-} from "../../data/disponibilidades";
-
-import {
-  obterConsultasDoMedico,
-} from "../../data/consultas";
+import { consultasAPI, disponibilidadesAPI, medicosAPI } from "../../services/api";
 
 function obterDataLocal() {
   const agora = new Date();
@@ -89,9 +80,38 @@ function EstadoConsulta({ estado }) {
 }
 
 export default function DashboardMedico() {
-  const medico = obterMedicoAutenticado();
+  const [medico, setMedico] = useState(null);
+  const [disponibilidades, setDisponibilidades] = useState([]);
+  const [consultas, setConsultas] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    let activo = true;
+    medicosAPI.obterMeu()
+      .then(async ({ data }) => {
+        const perfil = data.dados;
+        if (!activo) return;
+        setMedico(perfil);
+        const [horarios, consultasResponse] = await Promise.all([
+          disponibilidadesAPI.listar({ medico_id: perfil.id, todas: true }),
+          consultasAPI.listar(),
+        ]);
+        if (!activo) return;
+        setDisponibilidades(horarios.data.dados || []);
+        setConsultas((consultasResponse.data.dados || []).filter(
+          (consulta) => String(consulta.medicoId) === String(perfil.id)
+        ));
+      })
+      .catch((error) => { if (activo) setErro(error.message || "Não foi possível carregar o dashboard.") })
+      .finally(() => { if (activo) setCarregando(false) });
+    return () => { activo = false };
+  }, []);
 
   if (!medico) {
+    if (carregando) {
+      return <main className="mx-auto w-full max-w-5xl px-4 py-12 text-texto-secundario">A carregar dashboard...</main>;
+    }
     return (
       <main className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6">
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 sm:p-8">
@@ -111,12 +131,6 @@ export default function DashboardMedico() {
       </main>
     );
   }
-
-  const disponibilidades =
-    obterAgendaDoMedico(medico.id) || [];
-
-  const consultas =
-    obterConsultasDoMedico(medico.id) || [];
 
   const hoje = obterDataLocal();
 
@@ -150,6 +164,7 @@ export default function DashboardMedico() {
   return (
     <main className="min-h-[70vh] bg-gray-50/70">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {erro && <div role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{erro}</div>}
 
         {/* Cabeçalho de boas-vindas */}
 

@@ -1,19 +1,31 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 
-import { obterMedicos } from "../data/medicos"
-import { obterUsuarioPorId } from "../data/usuarios"
+import { medicosAPI } from "../services/api"
 import DoctorCard from "../components/CardMedico"
 import AppIcon from "../components/ui/AppIcon"
 
 
 function Medicos() {
-  const medicos = obterMedicos().filter((medico) => {
-    const conta = obterUsuarioPorId(medico.usuarioId)
-    return Boolean(conta) && conta.ativo !== false
-  })
-
   const [searchParams, setSearchParams] = useSearchParams()
+  const [medicos, setMedicos] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [erroApi, setErroApi] = useState("")
+
+  useEffect(() => {
+    let activo = true
+    medicosAPI.listar()
+      .then(({ data }) => {
+        if (activo) setMedicos(data.dados || [])
+      })
+      .catch((error) => {
+        if (activo) setErroApi(error.message || "Não foi possível carregar os médicos.")
+      })
+      .finally(() => {
+        if (activo) setCarregando(false)
+      })
+    return () => { activo = false }
+  }, [])
 
   /*
     =========
@@ -66,20 +78,13 @@ function Medicos() {
   */
 
   useEffect(() => {
-
-    const termo =
-      searchParams.get("pesquisa") || ""
-
-    const especialidade =
-      searchParams.get("especialidade") || ""
-
-
-    setPesquisa(termo)
-
-    setTermoPesquisado(termo)
-
-    setEspecialidadeSelecionada(especialidade)
-
+    Promise.resolve().then(() => {
+      const termo = searchParams.get("pesquisa") || ""
+      const especialidade = searchParams.get("especialidade") || ""
+      setPesquisa(termo)
+      setTermoPesquisado(termo)
+      setEspecialidadeSelecionada(especialidade)
+    })
   }, [searchParams])
 
 
@@ -568,7 +573,11 @@ function Medicos() {
             LISTA DE MÉDICOS
         */}
 
-        {medicosFiltrados.length > 0 ? (
+        {carregando ? (
+          <div role="status" className="rounded-2xl border border-borda bg-white p-10 text-center text-texto-secundario">A carregar médicos...</div>
+        ) : erroApi ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">{erroApi}</div>
+        ) : medicosFiltrados.length > 0 ? (
 
           <div className="
             grid

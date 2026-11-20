@@ -1,17 +1,13 @@
 
 import { Link, useNavigate } from "react-router-dom";
-
-import {
-  obterUsuarioAutenticado,
-  removerUsuarioAutenticado,
-} from "../../data/usuarios";
+import { useAuth } from "../../context/AuthContext";
 
 function PerfilMedicoPendente() {
-  const usuario = obterUsuarioAutenticado();
+  const { usuario, logout } = useAuth();
   const navegar = useNavigate();
 
   function terminarSessao() {
-    removerUsuarioAutenticado();
+    logout();
     navegar("/login", { replace: true });
   }
 

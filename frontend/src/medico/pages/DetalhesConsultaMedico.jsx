@@ -1,19 +1,10 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Link,
   useParams,
 } from "react-router-dom"
 
-import {
-  obterMedicoAutenticado,
-} from "../../data/medicos"
-
-import {
-  obterConsultasDoMedico,
-  confirmarConsultaPeloMedico,
-  marcarConsultaComoRealizada,
-  cancelarConsultaPeloMedico,
-} from "../../data/consultas"
+import { consultasAPI, medicosAPI, normalizarConsulta } from "../../services/api"
 
 function formatarData(data) {
   if (!data) {
@@ -131,8 +122,9 @@ function consultaJaComecou(consulta) {
 export default function DetalhesConsultaMedico() {
   const { id } = useParams()
 
-  const medico =
-    obterMedicoAutenticado()
+  const [medico, setMedico] = useState(null)
+  const [consultaEncontrada, setConsultaEncontrada] = useState(null)
+  const [carregando, setCarregando] = useState(true)
 
   const [mensagem, setMensagem] =
     useState("")
@@ -142,6 +134,19 @@ export default function DetalhesConsultaMedico() {
 
   const [consultaAtualizada, setConsultaAtualizada] =
     useState(null)
+
+  useEffect(() => {
+    let activo = true
+    Promise.all([medicosAPI.obterMeu(), consultasAPI.obter(id)])
+      .then(([medicoResponse, consultaResponse]) => {
+        if (!activo) return
+        setMedico(medicoResponse.data.dados)
+        setConsultaEncontrada(consultaResponse.data.dados)
+      })
+      .catch((errorApi) => { if (activo) setErro(errorApi.message || "Não foi possível carregar a consulta.") })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [id])
 
   /*
    * Se não existir médico autenticado,
@@ -179,22 +184,6 @@ export default function DetalhesConsultaMedico() {
    * Mantemos este método porque é o mesmo
    * que já está a funcionar na MinhaAgendaMedico.
    */
-  const consultas =
-    obterConsultasDoMedico(
-      medico.id
-    ) || []
-
-  /*
-   * Procuramos a consulta pelo ID
-   * recebido na URL.
-   */
-  const consultaEncontrada =
-    consultas.find(
-      (item) =>
-        String(item.id) ===
-        String(id)
-    ) || null
-
   /*
    * Depois de uma ação, usamos o objeto
    * atualizado imediatamente.
@@ -203,7 +192,7 @@ export default function DetalhesConsultaMedico() {
     consultaAtualizada ||
     consultaEncontrada
 
-  function executarAcao(acao) {
+  async function executarAcao(acao) {
     setMensagem("")
     setErro("")
 
@@ -225,57 +214,24 @@ export default function DetalhesConsultaMedico() {
     }
 
     try {
-      if (acao === "confirmada") {
-        const atualizada =
-          confirmarConsultaPeloMedico(
-            consulta.id,
-            medico.id
-          )
-
-        setConsultaAtualizada(atualizada)
-        setMensagem("Consulta confirmada com sucesso.")
-        return
-      }
-
-      if (
-        acao === "realizada"
-      ) {
-        const atualizada =
-          marcarConsultaComoRealizada(
-            consulta.id,
-            medico.id
-          )
-
-        setConsultaAtualizada(
-          atualizada
-        )
-
-        setMensagem(
-          "Consulta marcada como realizada com sucesso."
-        )
-
-        return
-      }
-
-      const atualizada =
-        cancelarConsultaPeloMedico(
-          consulta.id,
-          medico.id
-        )
-
-      setConsultaAtualizada(
-        atualizada
-      )
-
-      setMensagem(
-        "Consulta cancelada com sucesso."
-      )
+      const estado = acao === "confirmada"
+        ? "confirmada"
+        : acao === "realizada"
+          ? "concluida"
+          : "cancelada"
+      const { data } = await consultasAPI.alterarEstado(consulta.id, estado)
+      setConsultaAtualizada(normalizarConsulta(data.dados))
+      setMensagem(estado === "confirmada" ? "Consulta confirmada com sucesso." : estado === "concluida" ? "Consulta marcada como realizada com sucesso." : "Consulta cancelada com sucesso.")
     } catch (error) {
       setErro(
         error?.message ||
           "Não foi possível actualizar a consulta."
       )
     }
+  }
+
+  if (carregando) {
+    return <main className="min-h-[70vh] p-8 text-center text-gray-600">A carregar consulta...</main>
   }
 
   /*

@@ -1,38 +1,68 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import AppIcon from "../../components/ui/AppIcon"
-import { obterUsuarioAutenticado } from "../../data/usuarios"
-import { obterNotificacoesPaciente, marcarNotificacaoComoLida, marcarTodasNotificacoesComoLidas } from "../../data/notificacoesPaciente"
-import { obterConsultasDoPaciente } from "../../data/consultas"
-import { useStorageSync } from "../../hooks/useStorageSync"
+import { useAuth } from "../../context/AuthContext"
+import { consultasAPI, notificacoesAPI } from "../../services/api"
 
 export default function NotificacoesPaciente() {
   const navegar = useNavigate()
   const [actualizacao, setActualizacao] = useState(0)
-  useStorageSync("consultas")
-  const paciente = obterUsuarioAutenticado()
+  const [consultas, setConsultas] = useState([])
+  const [notificacoes, setNotificacoes] = useState([])
+  const [erro, setErro] = useState("")
+  const [carregando, setCarregando] = useState(true)
+  const { usuario: paciente } = useAuth()
+
+  useEffect(() => {
+    if (!paciente) return
+    let activo = true
+    Promise.all([consultasAPI.listar(), notificacoesAPI.listar()])
+      .then(([consultasResponse, notificacoesResponse]) => {
+        if (!activo) return
+        setConsultas((consultasResponse.data.dados || []).filter(
+          (consulta) => String(consulta.pacienteId) === String(paciente.id)
+        ))
+        setNotificacoes(notificacoesResponse.data.dados || [])
+      })
+      .catch((error) => { if (activo) setErro(error.message || "Não foi possível carregar notificações.") })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [paciente, actualizacao])
 
   if (!paciente) { navegar("/login", { replace: true }); return null }
   if ((paciente.tipo || paciente.role) !== "paciente") { navegar("/", { replace: true }); return null }
 
-  const consultas = obterConsultasDoPaciente(paciente.id)
-  const notificacoes = obterNotificacoesPaciente(paciente.id)
   const naoLidas = notificacoes.filter((item) => !item.lida).length
 
-  function marcarTodas() {
-    marcarTodasNotificacoesComoLidas(paciente.id)
+  async function marcarTodas() {
+    try {
+      await notificacoesAPI.marcarTodasLidas()
+      setErro("")
+    } catch (error) {
+      setErro(error.message || "Não foi possível actualizar as notificações.")
+    }
     setActualizacao((n) => n + 1)
   }
-  function abrirNotificacao(item) {
-    if (!item.lida) marcarNotificacaoComoLida(paciente.id, item.id)
+  async function abrirNotificacao(item) {
+    if (!item.lida) {
+      try {
+        await notificacoesAPI.marcarLida(item.id)
+        setActualizacao((n) => n + 1)
+      } catch (error) {
+        setErro(error.message || "Não foi possível marcar a notificação.")
+        return
+      }
+    }
     navegar(item.link || "/paciente/minhas-consultas")
   }
 
   return <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
     <header className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div><p className="text-sm font-semibold text-primaria">Wenji Maka · Área do paciente</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900">Notificações</h1><p className="mt-2 max-w-2xl text-sm text-gray-600">Acompanhe os estados das consultas e os lembretes próximos. Nesta versão, os avisos são gerados localmente a partir das suas marcações.</p></div>
+      <div><p className="text-sm font-semibold text-primaria">Wenji Maka · Área do paciente</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900">Notificações</h1><p className="mt-2 max-w-2xl text-sm text-gray-600">Acompanhe os avisos registados para a sua conta.</p></div>
       {naoLidas > 0 && <button type="button" onClick={marcarTodas} className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"><AppIcon name="check" size={17}/> Marcar todas como lidas</button>}
     </header>
+    {erro && <p role="alert" className="mb-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{erro}</p>}
+    {carregando && <p role="status" className="mb-5 text-sm text-gray-600">A carregar notificações...</p>}
 
     <div className="mb-6 grid gap-4 sm:grid-cols-3">
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><p className="text-sm text-gray-500">Total de avisos</p><p className="mt-2 text-3xl font-bold text-gray-900">{notificacoes.length}</p></div>
@@ -47,6 +77,6 @@ export default function NotificacoesPaciente() {
         <button type="button" onClick={() => abrirNotificacao(item)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Ver consulta <AppIcon name="file" size={16}/></button>
       </article>)}
     </section>}
-    <p className="mt-6 flex items-start gap-2 text-xs leading-5 text-gray-500"><AppIcon name="shield" size={16} className="mt-0.5 shrink-0"/> As notificações desta versão são informativas e locais. Não substituem mensagens enviadas pelo centro médico nem garantem entrega de lembretes fora do sistema.</p>
+    <p className="mt-6 flex items-start gap-2 text-xs leading-5 text-gray-500"><AppIcon name="shield" size={16} className="mt-0.5 shrink-0"/> As notificações são apresentadas a partir dos registos guardados na API.</p>
   </main>
 }

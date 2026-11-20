@@ -1,13 +1,9 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom"
-
-import {
-  obterUsuarioAutenticado,
-  usuarioIsAdmin,
-} from "../../data/usuarios"
+import { useAuth } from "../../context/AuthContext"
 
 function RotaAdminProtegida() {
   const location = useLocation()
-  const usuario = obterUsuarioAutenticado()
+  const { usuario, eAdmin } = useAuth()
 
   if (!usuario) {
     return (
@@ -19,7 +15,7 @@ function RotaAdminProtegida() {
     )
   }
 
-  if (!usuarioIsAdmin(usuario)) {
+  if (!eAdmin) {
     return <Navigate to="/" replace />
   }
 

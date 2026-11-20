@@ -1,20 +1,6 @@
 
-import { useState } from "react";
-
-import {
-  obterMedicoAutenticado,
-} from "../../data/medicos";
-
-import {
-  obterConsultas,
-} from "../../data/consultas";
-
-import {
-  obterAgendaDoMedico,
-  adicionarDisponibilidade,
-  actualizarDisponibilidade,
-  removerDisponibilidade,
-} from "../../data/disponibilidades";
+import { useEffect, useState } from "react";
+import { medicosAPI, disponibilidadesAPI } from "../../services/api";
 
 function dataLocalISO(data = new Date()) {
   const ano = data.getFullYear();
@@ -32,10 +18,9 @@ function inicioDaSemana(data) {
 }
 
 export default function GerirDisponibilidade() {
-  const [medico] = useState(() => obterMedicoAutenticado());
-  const [agenda, setAgenda] = useState(() =>
-    medico ? obterAgendaDoMedico(medico.id) : []
-  );
+  const [medico, setMedico] = useState(null);
+  const [agenda, setAgenda] = useState([]);
+  const [carregando, setCarregando] = useState(true);
   const [disponibilidadeEmEdicao, setDisponibilidadeEmEdicao] =
     useState(null);
   const [visualizacao, setVisualizacao] = useState("semana");
@@ -62,6 +47,23 @@ export default function GerirDisponibilidade() {
 
     return item.data >= inicioISO && item.data < fimISO;
   });
+
+  useEffect(() => {
+    let activo = true;
+    medicosAPI.obterMeu()
+      .then(async ({ data }) => {
+        if (!activo) return;
+        setMedico(data.dados);
+        const { data: disponibilidadeData } = await disponibilidadesAPI.listar({
+          medico_id: data.dados.id,
+          todas: true,
+        });
+        if (activo) setAgenda(disponibilidadeData.dados || []);
+      })
+      .catch((error) => { if (activo) setErro(error.message || "Não foi possível carregar o perfil e agenda do médico.") })
+      .finally(() => { if (activo) setCarregando(false) });
+    return () => { activo = false };
+  }, []);
 
   function alterarPeriodo(direccao) {
     const data = new Date(`${dataReferencia}T12:00:00`);
@@ -97,10 +99,10 @@ export default function GerirDisponibilidade() {
     setErro("");
   }
 
-  function carregarAgenda() {
-    setAgenda(
-      medico ? obterAgendaDoMedico(medico.id) : []
-    );
+  async function carregarAgenda() {
+    if (!medico) return;
+    const { data } = await disponibilidadesAPI.listar({ medico_id: medico.id, todas: true });
+    setAgenda(data.dados || []);
   }
 
   function alterarCampo(event) {
@@ -112,7 +114,7 @@ export default function GerirDisponibilidade() {
     }));
   }
 
-  function submeter(event) {
+  async function submeter(event) {
     event.preventDefault();
 
     setErro("");
@@ -127,21 +129,21 @@ export default function GerirDisponibilidade() {
 
     try {
       if (disponibilidadeEmEdicao) {
-        actualizarDisponibilidade(
-          disponibilidadeEmEdicao,
-          medico.id,
-          formulario,
-          obterConsultas()
-        );
+        await disponibilidadesAPI.actualizar(disponibilidadeEmEdicao, {
+          medico_id: String(medico.id),
+          data: formulario.data,
+          hora_inicio: formulario.horaInicio,
+          hora_fim: formulario.horaFim,
+        });
         setDataReferencia(formulario.data);
         setSucesso("Disponibilidade actualizada com sucesso.");
         cancelarEdicao();
       } else {
-        adicionarDisponibilidade({
-          medicoId: medico.id,
+        await disponibilidadesAPI.criar({
+          medico_id: String(medico.id),
           data: formulario.data,
-          horaInicio: formulario.horaInicio,
-          horaFim: formulario.horaFim,
+          hora_inicio: formulario.horaInicio,
+          hora_fim: formulario.horaFim,
         });
         setDataReferencia(formulario.data);
         setSucesso("Disponibilidade registada com sucesso.");
@@ -152,7 +154,7 @@ export default function GerirDisponibilidade() {
         });
       }
 
-      carregarAgenda();
+      await carregarAgenda();
     } catch (error) {
       setErro(
         error.message ||
@@ -161,7 +163,7 @@ export default function GerirDisponibilidade() {
     }
   }
 
-  function remover(id) {
+  async function remover(id) {
     setErro("");
     setSucesso("");
 
@@ -172,14 +174,10 @@ export default function GerirDisponibilidade() {
     if (!confirmar) return;
 
     try {
-      removerDisponibilidade(
-        id,
-        medico.id,
-        obterConsultas()
-      );
+      await disponibilidadesAPI.cancelar(id);
 
       setSucesso("Disponibilidade removida.");
-      carregarAgenda();
+      await carregarAgenda();
     } catch (error) {
       setErro(
         error.message ||
@@ -198,6 +196,10 @@ export default function GerirDisponibilidade() {
         year: "numeric",
       }
     );
+  }
+
+  if (carregando) {
+    return <main className="mx-auto max-w-3xl p-6 text-texto-secundario">A carregar agenda médica...</main>;
   }
 
   if (!medico) {

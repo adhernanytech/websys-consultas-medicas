@@ -1,23 +1,41 @@
+import { useEffect, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { obterMedicoPorId } from "../data/medicos"
-import { obterUsuarioAutenticado, usuarioIsPaciente, obterUsuarioPorId } from "../data/usuarios"
+import { useAuth } from "../context/AuthContext"
+import { medicosAPI } from "../services/api"
 import AppIcon from "../components/ui/AppIcon"
 
 function PerfilMedico() {
   const { id } = useParams()
   const navegar = useNavigate()
-  const usuario = obterUsuarioAutenticado()
-  const perfilMedico = obterMedicoPorId(id)
-  const contaMedico = perfilMedico ? obterUsuarioPorId(perfilMedico.usuarioId) : null
-  const medico = contaMedico && contaMedico.ativo !== false ? perfilMedico : null
+  const [medico, setMedico] = useState(null)
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState("")
+  const { usuario, ePaciente } = useAuth()
+
+  useEffect(() => {
+    let activo = true
+    medicosAPI.obter(id)
+      .then(({ data }) => { if (activo) setMedico(data.dados) })
+      .catch((error) => {
+        if (!activo) return
+        setMedico(null)
+        setErro(error.message || "Não foi possível carregar o perfil médico.")
+      })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [id])
 
   function marcarConsulta() {
     const destino = `/paciente/marcar-consulta/${medico.id}`
-    if (usuarioIsPaciente(usuario)) {
+    if (ePaciente && usuario?.ativo !== false) {
       navegar(destino)
       return
     }
     navegar("/login", { state: { from: { pathname: destino } } })
+  }
+
+  if (carregando) {
+    return <main className="min-h-[60vh] bg-fundo px-5 py-16 text-center text-texto-secundario">A carregar perfil do médico...</main>
   }
 
   if (!medico) {
@@ -26,7 +44,7 @@ function PerfilMedico() {
 
   return (
     <main className="min-h-screen bg-fundo">
-      <section className="border-b border-borda bg-white"><div className="mx-auto max-w-7xl px-5 py-5 sm:px-8 lg:px-10"><Link to="/medicos" className="inline-flex items-center gap-2 text-sm font-semibold text-primaria hover:text-primaria-hover"><AppIcon name="arrow-right" size={16} className="rotate-180" /> Voltar à lista de médicos</Link></div></section>
+      <section className="border-b border-borda bg-white"><div className="mx-auto max-w-7xl px-5 py-5 sm:px-8 lg:px-10"><Link to="/medicos" className="inline-flex items-center gap-2 text-sm font-semibold text-primaria hover:text-primaria-hover"><AppIcon name="arrow-right" size={16} className="rotate-180" /> Voltar à lista de médicos</Link>{erro && <p role="alert" className="mt-2 text-sm text-red-700">{erro}</p>}</div></section>
       <section className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12 lg:px-10">
         <div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
           <aside className="overflow-hidden rounded-3xl border border-borda bg-white shadow-sm">

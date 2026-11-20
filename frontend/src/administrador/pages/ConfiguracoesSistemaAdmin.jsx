@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react"
 import PageHeader from "../../components/ui/PageHeader"
-import { registarAccaoAdmin } from "../../data/auditoriaAdmin"
+import { adminAPI } from "../../services/api"
 
-const CHAVE = "configuracoesSistemaClinica"
 const PADRAO = {
   nomeClinica: "Wenji Maka",
   emailContacto: "",
@@ -22,26 +21,30 @@ const PADRAO = {
   maximoConsultasDia: "20",
   exigirConfirmacaoAdmin: true,
 }
-function lerConfiguracoes() {
-  try {
-    const guardadas = JSON.parse(localStorage.getItem(CHAVE) || "{}")
-    const resultado = { ...PADRAO, ...(guardadas && typeof guardadas === "object" ? guardadas : {}) }
-    if (["Sistema Médico", "Sistema Médico Online", "Sistema Médico - Online"].includes(resultado.nomeClinica)) resultado.nomeClinica = "Wenji Maka"
-    return resultado
-  } catch { return PADRAO }
-}
 
 function ConfiguracoesSistemaAdmin() {
-  const [formulario, setFormulario] = useState(lerConfiguracoes)
+  const [formulario, setFormulario] = useState(PADRAO)
   const [mensagem, setMensagem] = useState("")
   const [erro, setErro] = useState("")
-  useEffect(() => { setFormulario(lerConfiguracoes()) }, [])
+  useEffect(() => {
+    let activo = true
+    adminAPI.obterConfiguracoes()
+      .then(({ data }) => {
+        if (activo && data.dados?.valor) {
+          setFormulario({ ...PADRAO, ...data.dados.valor })
+        }
+      })
+      .catch((errorApi) => {
+        if (activo) setErro(errorApi.message || "Não foi possível carregar as configurações.")
+      })
+    return () => { activo = false }
+  }, [])
   function alterar(evento) {
     const { name, value, type, checked } = evento.target
     setFormulario(atual => ({ ...atual, [name]: type === "checkbox" ? checked : value }))
     setMensagem(""); setErro("")
   }
-  function guardar(evento) {
+  async function guardar(evento) {
     evento.preventDefault(); setMensagem(""); setErro("")
     if (!window.confirm("Confirma que pretende guardar as configurações do sistema Wenji Maka?")) return
     if (Number(formulario.lembreteConsultaHoras) < 0 || Number(formulario.lembreteConsultaHoras) > 720) { setErro("O lembrete deve estar entre 0 e 720 horas."); return }
@@ -49,15 +52,19 @@ function ConfiguracoesSistemaAdmin() {
     if (Number(formulario.duracaoConsulta) < 10 || Number(formulario.duracaoConsulta) > 240) { setErro("A duração da consulta deve estar entre 10 e 240 minutos."); return }
     if (Number(formulario.antecedenciaMinimaHoras) < 0 || Number(formulario.antecedenciaCancelamentoHoras) < 0) { setErro("As antecedências não podem ser negativas."); return }
     try {
-      localStorage.setItem(CHAVE, JSON.stringify({ ...formulario, duracaoConsulta: Number(formulario.duracaoConsulta), lembreteConsultaHoras: Number(formulario.lembreteConsultaHoras), maximoConsultasDia: Number(formulario.maximoConsultasDia), antecedenciaMinimaHoras: Number(formulario.antecedenciaMinimaHoras), antecedenciaCancelamentoHoras: Number(formulario.antecedenciaCancelamentoHoras), actualizadoEm: new Date().toISOString() }))
-      registarAccaoAdmin("Configurações gerais actualizadas", "configurações", `Duração padrão: ${formulario.duracaoConsulta} min`)
-      setMensagem("Configurações guardadas neste navegador.")
-    } catch { setErro("Não foi possível guardar as configurações no armazenamento local.") }
+      const configuracoes = { ...formulario, duracaoConsulta: Number(formulario.duracaoConsulta), lembreteConsultaHoras: Number(formulario.lembreteConsultaHoras), maximoConsultasDia: Number(formulario.maximoConsultasDia), antecedenciaMinimaHoras: Number(formulario.antecedenciaMinimaHoras), antecedenciaCancelamentoHoras: Number(formulario.antecedenciaCancelamentoHoras) }
+      await adminAPI.guardarConfiguracoes(configuracoes)
+      setMensagem("Configurações guardadas no servidor.")
+    } catch (errorApi) { setErro(errorApi.message || "Não foi possível guardar as configurações no servidor.") }
   }
-  function repor() {
+  async function repor() {
     if (!window.confirm("Repor os valores padrão das configurações?")) return
-    setFormulario(PADRAO); localStorage.setItem(CHAVE, JSON.stringify(PADRAO)); setMensagem("Valores padrão repostos."); setErro("")
-    registarAccaoAdmin("Configurações repostas", "configurações", "Valores padrão")
+    try {
+      await adminAPI.guardarConfiguracoes(PADRAO)
+      setFormulario(PADRAO); setMensagem("Valores padrão repostos."); setErro("")
+    } catch (errorApi) {
+      setErro(errorApi.message || "Não foi possível repor as configurações.")
+    }
   }
   return <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8"><PageHeader eyebrow="Administração" title="Configurações do sistema" description="Defina os parâmetros gerais que poderão ser utilizados pelas páginas e, futuramente, pela API. Nesta fase, os valores ficam guardados no navegador." actions={<button onClick={repor} type="button" className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold">Repor padrão</button>} />
     {mensagem && <p role="status" className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{mensagem}</p>}{erro && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{erro}</p>}

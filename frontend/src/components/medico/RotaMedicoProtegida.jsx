@@ -1,16 +1,33 @@
 
+import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-
-import {
-  obterUsuarioAutenticado,
-  usuarioIsMedico,
-} from "../../data/usuarios";
-
-import { obterMedicoDaConta } from "../../data/medicos";
+import { useAuth } from "../../context/AuthContext";
+import { medicosAPI } from "../../services/api";
 
 function RotaMedicoProtegida() {
   const location = useLocation();
-  const usuario = obterUsuarioAutenticado();
+  const { usuario, deveAlterarSenha } = useAuth();
+  const [medicoAssociado, setMedicoAssociado] = useState(false);
+  const [verificandoPerfil, setVerificandoPerfil] = useState(true);
+  const [erroPerfil, setErroPerfil] = useState("");
+
+  useEffect(() => {
+    if (!usuario || usuario.tipo !== "medico" || deveAlterarSenha) return;
+    let activo = true;
+    medicosAPI.obterMeu()
+      .then(({ data }) => {
+        if (activo) setMedicoAssociado(Boolean(data.dados));
+      })
+      .catch((error) => {
+        if (!activo) return;
+        if (error.status === 404) setMedicoAssociado(false);
+        else setErroPerfil(error.message || "Não foi possível verificar o perfil médico.");
+      })
+      .finally(() => {
+        if (activo) setVerificandoPerfil(false);
+      });
+    return () => { activo = false; };
+  }, [usuario, deveAlterarSenha]);
 
   if (!usuario) {
     return (
@@ -22,7 +39,7 @@ function RotaMedicoProtegida() {
     );
   }
 
-  if (!usuarioIsMedico(usuario)) {
+  if (usuario.tipo !== "medico") {
     return <Navigate to="/" replace />;
   }
 
@@ -34,7 +51,7 @@ function RotaMedicoProtegida() {
     location.pathname === "/medico/alterar-senha-inicial";
 
   // Impede o acesso às restantes páginas até à alteração da senha.
-  if (usuario.deveAlterarSenha === true) {
+  if (deveAlterarSenha) {
     if (!estaNaPaginaAlterarSenha) {
       return (
         <Navigate
@@ -60,11 +77,18 @@ function RotaMedicoProtegida() {
     );
   }
 
-  const medico = obterMedicoDaConta(usuario.id);
   const estaNaPaginaPendente =
     location.pathname === "/medico/perfil-pendente";
 
-  if (!medico && !estaNaPaginaPendente) {
+  if (erroPerfil) {
+    return <main className="p-8 text-center text-red-700">{erroPerfil}</main>;
+  }
+
+  if (verificandoPerfil) {
+    return <main className="p-8 text-center text-gray-600">A verificar o perfil médico...</main>;
+  }
+
+  if (!medicoAssociado && !estaNaPaginaPendente) {
     return (
       <Navigate
         to="/medico/perfil-pendente"
@@ -73,7 +97,7 @@ function RotaMedicoProtegida() {
     );
   }
 
-  if (medico && estaNaPaginaPendente) {
+  if (medicoAssociado && estaNaPaginaPendente) {
     return (
       <Navigate
         to="/medico/dashboard"

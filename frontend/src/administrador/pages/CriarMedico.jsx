@@ -2,13 +2,7 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
-import {
-  obterEspecialidadesActivas,
-} from "../../data/especialidades"
-
-import {
-  criarMedicoComConta,
-} from "../../data/administracao"
+import { especialidadesAPI, medicosAPI } from "../../services/api"
 
 function CriarMedico() {
   const navegar = useNavigate()
@@ -26,7 +20,11 @@ function CriarMedico() {
   const [erro, setErro] = useState("")
 
   useEffect(() => {
-    setEspecialidades(obterEspecialidadesActivas())
+    let activo = true
+    especialidadesAPI.listar()
+      .then(({ data }) => { if (activo) setEspecialidades(data.dados || []) })
+      .catch((error) => { if (activo) setErro(error.message || "Não foi possível carregar especialidades.") })
+    return () => { activo = false }
   }, [])
 
   function alterarCampo(event) {
@@ -66,7 +64,7 @@ function CriarMedico() {
     leitor.readAsDataURL(ficheiro)
   }
 
-  function submeter(event) {
+  async function submeter(event) {
     event.preventDefault()
     if (!window.confirm("Confirma a criação desta conta médica com os dados e a fotografia seleccionados?")) return
     setErro("")
@@ -80,15 +78,19 @@ function CriarMedico() {
       }
 
       if (!formulario.foto) throw new Error("A fotografia do médico é obrigatória.")
-      const resultado = criarMedicoComConta({
-        ...formulario,
-        especialidadeId: formulario.especialidadeId,
+      const { data } = await medicosAPI.criar({
+        nome: formulario.nome,
+        email: formulario.email,
+        sexo: formulario.sexo || undefined,
+        especialidade_id: String(formulario.especialidadeId),
+        fotografia_url: formulario.foto,
       })
+      const resultado = data.dados
 
       setCredenciais({
-        nome: resultado.medico.nome,
-        email: resultado.usuario.email,
-        senha: resultado.senhaInicial,
+        nome: resultado.utilizador?.nome || formulario.nome,
+        email: resultado.credenciais.email,
+        senha: resultado.credenciais.senhaInicial,
       })
 
       setFormulario({

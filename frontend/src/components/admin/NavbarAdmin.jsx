@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom"
 import { useState } from "react"
-import { obterUsuarioAutenticado, removerUsuarioAutenticado } from "../../data/usuarios"
-import { registarAccaoAdmin, registarAccaoUtilizador } from "../../data/auditoriaAdmin"
+import { useAuth } from "../../context/AuthContext"
+import { registarAccaoUtilizador } from "../../data/auditoriaAdmin"
 import AppIcon from "../ui/AppIcon"
 
 const links = [
@@ -18,12 +18,12 @@ const links = [
 
 export default function NavbarAdmin({ collapsed, onToggle }) {
   const navigate = useNavigate()
-  const usuario = obterUsuarioAutenticado()
+  const { usuario, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   function sair() {
     if (!window.confirm("Tem a certeza de que pretende terminar a sessão?")) return
     registarAccaoUtilizador("Sessão terminada", "autenticação", "Logout do administrador")
-    removerUsuarioAutenticado()
+    logout()
     navigate("/login", { replace: true })
   }
   const navItems = (mobile = false) => <>

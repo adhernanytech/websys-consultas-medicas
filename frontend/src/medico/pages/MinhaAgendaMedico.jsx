@@ -1,10 +1,9 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
-import { obterMedicoAutenticado } from "../../data/medicos"
-import { obterConsultasDoMedico } from "../../data/consultas"
 import { registarAccaoUtilizador } from "../../data/auditoriaAdmin"
 import { exportarCSV, exportarPDF } from "../../utils/exportacaoAdmin"
+import { consultasAPI, medicosAPI } from "../../services/api"
 
 function obterDataHoje() {
   const hoje = new Date()
@@ -124,10 +123,31 @@ function MinhaAgendaMedico() {
   const [pesquisa, setPesquisa] = useState("")
   const [dataFiltro, setDataFiltro] = useState("")
   const [estadoFiltro, setEstadoFiltro] = useState("todos")
-  const medico =
-    obterMedicoAutenticado()
+  const [medico, setMedico] = useState(null)
+  const [consultas, setConsultas] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState("")
+
+  useEffect(() => {
+    let activo = true
+    Promise.all([medicosAPI.obterMeu(), consultasAPI.listar()])
+      .then(([medicoResponse, consultasResponse]) => {
+        if (!activo) return
+        const perfil = medicoResponse.data.dados
+        setMedico(perfil)
+        setConsultas((consultasResponse.data.dados || []).filter(
+          (consulta) => String(consulta.medicoId) === String(perfil.id)
+        ))
+      })
+      .catch((errorApi) => { if (activo) setErro(errorApi.message || "Não foi possível carregar a agenda.") })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [])
 
   if (!medico) {
+    if (carregando) {
+      return <main className="min-h-[70vh] p-8 text-center text-gray-600">A carregar agenda...</main>
+    }
     return (
       <main className="min-h-[70vh] bg-gray-50 px-4 py-12">
         <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 text-center shadow-sm">
@@ -138,11 +158,6 @@ function MinhaAgendaMedico() {
       </main>
     )
   }
-
-  const consultas =
-    obterConsultasDoMedico(
-      medico.id
-    )
 
   const hoje = obterDataHoje()
   const consultasFiltradas = consultas.filter((consulta) => {
@@ -299,6 +314,7 @@ function MinhaAgendaMedico() {
   return (
     <main className="min-h-[70vh] bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
+        {erro && <div role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{erro}</div>}
 
         {/* Cabeçalho */}
         <div className="mb-8">

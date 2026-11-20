@@ -8,7 +8,7 @@ export default function PacienteLayout() {
       <NavbarPaciente />
       <div className="flex min-h-screen flex-col">
         <div className="flex-1"><Outlet /></div>
-        <Footer />
+        <Footer compacto />
       </div>
     </div>
   )

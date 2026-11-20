@@ -15,7 +15,7 @@ function normalizarEstado(estado) {
     .normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
 }
 
-/** Badge puramente visual; não altera nem valida o estado de negócio. */
+
 function StatusBadge({ estado, className = "" }) {
   const chave = normalizarEstado(estado)
   const estilo = ESTILOS[chave] || "bg-gray-100 text-gray-700 ring-gray-500/20"

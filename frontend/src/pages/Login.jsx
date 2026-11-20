@@ -1,21 +1,12 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { GoogleLogin } from '@react-oauth/google';
-
-
-
-import {
-  obterUsuarios,
-  guardarUsuarioAutenticado,
-  obterTipoUsuario,
-} from "../data/usuarios";
-
-import { obterMedicoDaConta } from "../data/medicos";
-import { registarAccaoUtilizador } from "../data/auditoriaAdmin";
+import { useAuth } from "../context/AuthContext";
+import { medicosAPI } from "../services/api";
 
 function Login() {
   const navegar = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
 
   const [formulario, setFormulario] = useState({
     email: "",
@@ -26,7 +17,6 @@ function Login() {
   const [tipoMensagem, setTipoMensagem] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
-  const [carregandoGoogle, setCarregandoGoogle] = useState(false);
 
   function alterarCampo(evento) {
     const { name, value } = evento.target;
@@ -40,7 +30,7 @@ function Login() {
     setTipoMensagem("");
   }
 
-  function fazerLogin(evento) {
+  async function fazerLogin(evento) {
     evento.preventDefault();
 
     setMensagem("");
@@ -69,35 +59,11 @@ function Login() {
       return;
     }
 
-    setCarregando(true);
-
     try {
-      const usuarios = obterUsuarios();
-
-      const usuario = usuarios.find(
-        (item) =>
-          String(item.email || "").trim().toLowerCase() === email
-      );
-
-      if (
-        !usuario ||
-        (usuario.senha !== senha &&
-          usuario.password !== senha)
-      ) {
-        setMensagem("Email ou palavra-passe incorrectos.");
-        setTipoMensagem("erro");
-        return;
-      }
-
-      if (usuario.ativo === false) {
-        setMensagem(
-          "A sua conta encontra-se desactivada. Contacte o administrador."
-        );
-        setTipoMensagem("erro");
-        return;
-      }
-
-      const tipo = obterTipoUsuario(usuario);
+      setCarregando(true);
+      const resposta = await login(email, senha);
+      const usuario = resposta.usuario;
+      const tipo = String(usuario?.tipo || resposta.role || "").toLowerCase();
 
       if (!["paciente", "medico", "admin"].includes(tipo)) {
         setMensagem("Esta conta tem um tipo de utilizador inválido.");
@@ -106,16 +72,9 @@ function Login() {
       }
 
       
-      guardarUsuarioAutenticado({
-        ...usuario,
-        role: tipo,
-        tipo,
-      });
-      registarAccaoUtilizador("Início de sessão", "autenticação", `Sessão iniciada com sucesso; perfil: ${tipo}`);
-
       // A primeira palavra-passe é temporária.
       // O médico deve alterá-la antes de aceder à área médica.
-      if (tipo === "medico" && usuario.deveAlterarSenha === true) {
+      if (tipo === "medico" && usuario.deve_alterar_senha === true) {
         navegar("/medico/alterar-senha-inicial", {
           replace: true,
         });
@@ -138,7 +97,7 @@ function Login() {
           destinoSolicitado.startsWith("/medico") &&
           tipo === "medico"
         ) {
-          const perfil = obterMedicoDaConta(usuario.id);
+          const perfil = await medicosAPI.obterMeu();
 
           navegar(
             perfil
@@ -164,7 +123,12 @@ function Login() {
       }
 
       if (tipo === "medico") {
-        const perfil = obterMedicoDaConta(usuario.id);
+        let perfil = null;
+        try {
+          perfil = await medicosAPI.obterMeu();
+        } catch (error) {
+          if (error.status !== 404) throw error;
+        }
 
         navegar(
           perfil
@@ -184,27 +148,6 @@ function Login() {
     } finally {
       setCarregando(false);
     }
-  }
-
-    function loginComGoogle() {
-
-    setCarregandoGoogle(true)
-
-    setMensagem("")
-    setTipoMensagem("")
-
-
-    setTimeout(() => {
-
-      setCarregandoGoogle(false)
-
-      setMensagem(
-        "O início de sessão com Google será implementado posteriormente."
-      )
-
-      setTipoMensagem("sucesso")
-
-    }, 1000)
   }
 
   return (
@@ -419,29 +362,6 @@ function Login() {
               {carregando ? "A verificar..." : "Entrar"}
             </button>
 
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-100" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Ou continue com</span>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-center">
-                <GoogleLogin
-                  onSuccess={(credentialResponse) => {
-                    console.log("Token do Google recebido:", credentialResponse.credential);
-                    
-                  }}
-                  onError={() => {
-                    console.log('Login do Google falhou');
-                  }}
-                  useOneTap
-                />
-              </div>
-            </div>
           </form>
 
           <p className="text-center text-texto-secundario text-sm mt-5">

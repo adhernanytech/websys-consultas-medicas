@@ -1,9 +1,8 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { obterConsultasDoPaciente, cancelarConsulta } from "../../data/consultas"
-import { obterUsuarioAutenticado } from "../../data/usuarios"
+import { useAuth } from "../../context/AuthContext"
 import { registarAccaoUtilizador } from "../../data/auditoriaAdmin"
-import { useStorageSync } from "../../hooks/useStorageSync"
+import { consultasAPI, normalizarConsulta } from "../../services/api"
 import { exportarCSV, exportarPDF } from "../../utils/exportacaoAdmin"
 import AppIcon from "../../components/ui/AppIcon"
 
@@ -19,21 +18,34 @@ function Estado({ estado }) {
 
 export default function MinhasConsultasPaciente() {
   const navigate = useNavigate()
-  useStorageSync("consultas")
   const [erro, setErro] = useState("")
   const [mensagem, setMensagem] = useState("")
+  const [consultas, setConsultas] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [actualizacao, setActualizacao] = useState(0)
   const [filtro, setFiltro] = useState("Todas")
   const [pesquisa, setPesquisa] = useState("")
   const [ordem, setOrdem] = useState("recentes")
-  const paciente = obterUsuarioAutenticado()
+  const { usuario: paciente } = useAuth()
+
+  useEffect(() => {
+    let activo = true
+    consultasAPI.listar()
+      .then(({ data }) => {
+        if (activo) setConsultas((data.dados || []).map(normalizarConsulta))
+      })
+      .catch((error) => { if (activo) setErro(error.message || "Não foi possível carregar as consultas.") })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [actualizacao])
 
   if (!paciente) { navigate("/login", { replace: true }); return null }
   if ((paciente.tipo || paciente.role) !== "paciente") { navigate("/", { replace: true }); return null }
   if (paciente.ativo === false) { navigate("/login", { replace: true }); return null }
 
-  const consultas = obterConsultasDoPaciente(paciente.id)
+  const minhasConsultas = consultas.filter((consulta) => String(consulta.pacienteId) === String(paciente.id))
   const termo = pesquisa.trim().toLocaleLowerCase("pt-PT")
-  const consultasFiltradas = consultas.filter((consulta) => {
+  const consultasFiltradas = minhasConsultas.filter((consulta) => {
     const correspondeEstado = filtro === "Todas" || consulta.estado === filtro || (filtro === "Realizada" && consulta.estado === "Concluída")
     const texto = [consulta.medicoNome, consulta.especialidade, consulta.motivo, consulta.estado, consulta.data].join(" ").toLocaleLowerCase("pt-PT")
     return correspondeEstado && (!termo || texto.includes(termo))
@@ -44,19 +56,20 @@ export default function MinhasConsultasPaciente() {
   })
 
   const filtros = [
-    { nome: "Todas", quantidade: consultas.length },
-    { nome: "Agendada", quantidade: consultas.filter((c) => c.estado === "Agendada").length },
-    { nome: "Confirmada", quantidade: consultas.filter((c) => c.estado === "Confirmada").length },
-    { nome: "Realizada", quantidade: consultas.filter((c) => ["Realizada", "Concluída"].includes(c.estado)).length },
-    { nome: "Cancelada", quantidade: consultas.filter((c) => c.estado === "Cancelada").length },
+    { nome: "Todas", quantidade: minhasConsultas.length },
+    { nome: "Agendada", quantidade: minhasConsultas.filter((c) => c.estado === "Agendada").length },
+    { nome: "Confirmada", quantidade: minhasConsultas.filter((c) => c.estado === "Confirmada").length },
+    { nome: "Realizada", quantidade: minhasConsultas.filter((c) => ["Realizada", "Concluída"].includes(c.estado)).length },
+    { nome: "Cancelada", quantidade: minhasConsultas.filter((c) => c.estado === "Cancelada").length },
   ]
 
-  function tratarCancelamento(consulta) {
+  async function tratarCancelamento(consulta) {
     if (!window.confirm(`Tem a certeza de que pretende cancelar a consulta com ${consulta.medicoNome || "o médico"}, marcada para ${formatarData(consulta.data)} às ${consulta.horario || "hora não definida"}?`)) return
     try {
-      cancelarConsulta(consulta.id, paciente.id)
+      await consultasAPI.alterarEstado(consulta.id, "cancelada")
       setErro("")
       setMensagem("A consulta foi cancelada com sucesso.")
+      setActualizacao((n) => n + 1)
     } catch (error) { setErro(error.message || "Não foi possível cancelar a consulta.") }
   }
 
@@ -78,6 +91,7 @@ export default function MinhasConsultasPaciente() {
     {erro && <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{erro}</div>}
     {mensagem && <div role="status" className="mb-5 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">{mensagem}</div>}
 
+    {carregando && <p role="status" className="mb-4 text-sm text-gray-600">A carregar as consultas...</p>}
     <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{filtros.map((item) => <button key={item.nome} type="button" onClick={() => setFiltro(item.nome)} className={`rounded-2xl border p-4 text-left transition ${filtro === item.nome ? "border-primaria bg-blue-50 ring-1 ring-blue-100" : "border-gray-200 bg-white hover:border-gray-300"}`}><span className="block text-sm text-gray-500">{item.nome}</span><strong className="mt-1 block text-2xl text-gray-900">{item.quantidade}</strong></button>)}</section>
 
     <section className="mb-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"><div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_200px_auto] md:items-end"><div><label htmlFor="pesquisa-consultas-paciente" className="mb-1.5 block text-sm font-semibold text-gray-700">Pesquisar consultas</label><div className="relative"><AppIcon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input id="pesquisa-consultas-paciente" value={pesquisa} onChange={(e) => setPesquisa(e.target.value)} placeholder="Médico, especialidade, motivo ou data" className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-3 text-sm outline-none focus:border-primaria focus:ring-2 focus:ring-blue-100"/></div></div><div><label htmlFor="ordem-consultas-paciente" className="mb-1.5 block text-sm font-semibold text-gray-700">Ordenação</label><select id="ordem-consultas-paciente" value={ordem} onChange={(e) => setOrdem(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none focus:border-primaria"><option value="recentes">Mais recentes</option><option value="antigas">Mais antigas</option></select></div><div className="flex gap-2"><button type="button" onClick={() => exportar("csv")} disabled={!consultasFiltradas.length} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"><AppIcon name="download" size={16}/> CSV</button><button type="button" onClick={() => exportar("pdf")} disabled={!consultasFiltradas.length} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"><AppIcon name="file" size={16}/> PDF</button></div></div></section>

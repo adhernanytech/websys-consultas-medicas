@@ -2,7 +2,17 @@
 import { Link } from "react-router-dom"
 import AppIcon from "./ui/AppIcon"
 
-function Footer() {
+function Footer({ compacto = false }) {
+  if (compacto) {
+    return (
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-1 px-5 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
+          <p>© {new Date().getFullYear()} Centro Médico Wenji Maka. Todos os direitos reservados.</p>
+        </div>
+      </footer>
+    )
+  }
+
   return (
     <footer className="border-t border-borda bg-fundo-secundario text-texto">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-5 py-10 sm:px-8 md:grid-cols-3 lg:px-10 lg:py-12">
@@ -19,7 +29,7 @@ function Footer() {
 
             <span>
               <strong className="block text-lg font-bold text-primaria">
-                Wenji Maka
+                Wenji Maka II
               </strong>
               <span className="text-xs uppercase tracking-widest text-texto-secundario">
                 Centro Médico

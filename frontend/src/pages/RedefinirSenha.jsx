@@ -1,5 +1,5 @@
 // src/pages/RedefinirSenha.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AppIcon from '../components/ui/AppIcon';
 

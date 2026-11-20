@@ -1,9 +1,9 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, NavLink, useNavigate } from "react-router-dom"
 import AppIcon from "../ui/AppIcon"
 import { registarAccaoUtilizador } from "../../data/auditoriaAdmin"
-import { obterUsuarioAutenticado, removerUsuarioAutenticado } from "../../data/usuarios"
-import { obterMedicoAutenticado } from "../../data/medicos"
+import { useAuth } from "../../context/AuthContext"
+import { medicosAPI } from "../../services/api"
 
 const links = [
   { to: "/medico/dashboard", texto: "Visão geral", icon: "dashboard", end: true },
@@ -21,8 +21,17 @@ function Iniciais({ nome }) {
 export default function NavbarMedico() {
   const navegar = useNavigate()
   const [menuAberto, setMenuAberto] = useState(false)
-  const usuario = obterUsuarioAutenticado()
-  const medico = obterMedicoAutenticado()
+  const { usuario, logout } = useAuth()
+  const [medico, setMedico] = useState(null)
+
+  useEffect(() => {
+    if (!usuario || usuario.tipo !== "medico") return
+    let activo = true
+    medicosAPI.obterMeu()
+      .then(({ data }) => { if (activo) setMedico(data.dados) })
+      .catch((error) => { if (activo) console.error("Não foi possível carregar o perfil médico da navegação.", error) })
+    return () => { activo = false }
+  }, [usuario])
 
   if (!usuario || usuario.tipo !== "medico") return null
 
@@ -30,7 +39,7 @@ export default function NavbarMedico() {
     setMenuAberto(false)
     if (!window.confirm("Tem a certeza de que deseja terminar a sessão?")) return
     registarAccaoUtilizador("Sessão terminada", "autenticação", "Logout do médico")
-    removerUsuarioAutenticado()
+    logout()
     navegar("/login", { replace: true })
   }
 

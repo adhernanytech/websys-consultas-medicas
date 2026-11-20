@@ -1,10 +1,9 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom"
 import AppIcon from "../ui/AppIcon"
 import { registarAccaoUtilizador } from "../../data/auditoriaAdmin"
-import { obterUsuarioAutenticado, removerUsuarioAutenticado } from "../../data/usuarios"
-import { obterNotificacoesPaciente } from "../../data/notificacoesPaciente"
-import { useStorageSync } from "../../hooks/useStorageSync"
+import { useAuth } from "../../context/AuthContext"
+import { notificacoesAPI } from "../../services/api"
 
 const links = [
   { to: "/paciente/dashboard", texto: "Visão geral", icon: "dashboard", end: true },
@@ -27,8 +26,21 @@ export default function NavbarPaciente() {
   const navegar = useNavigate()
   const location = useLocation()
   const [menuAberto, setMenuAberto] = useState(false)
-  useStorageSync("consultas")
-  const paciente = obterUsuarioAutenticado()
+  const { usuario: paciente, logout } = useAuth()
+  const [notificacoesPorLer, setNotificacoesPorLer] = useState(0)
+
+  useEffect(() => {
+    if (!paciente || paciente.tipo !== "paciente") return
+    let activo = true
+    notificacoesAPI.listar()
+      .then(({ data }) => {
+        if (activo) setNotificacoesPorLer((data.dados || []).filter((item) => !item.lida).length)
+      })
+      .catch((error) => {
+        if (activo) console.error("Não foi possível carregar notificações para a navegação.", error)
+      })
+    return () => { activo = false }
+  }, [paciente])
 
   if (!paciente || (paciente.tipo !== "paciente" && paciente.role !== "paciente")) return null
 
@@ -36,12 +48,11 @@ export default function NavbarPaciente() {
     setMenuAberto(false)
     if (!window.confirm("Tem a certeza de que deseja terminar a sessão?")) return
     registarAccaoUtilizador("Sessão terminada", "autenticação", "Logout do paciente")
-    removerUsuarioAutenticado()
+    logout()
     navegar("/login", { replace: true })
   }
 
   function fecharMenu() { setMenuAberto(false) }
-  const notificacoesPorLer = obterNotificacoesPaciente(paciente.id).filter((item) => !item.lida).length
   const navegacao = (mobile = false) => (
     <nav aria-label="Navegação do paciente" className="space-y-1">
       {links.map((link) => (

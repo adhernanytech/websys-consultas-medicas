@@ -1,31 +1,16 @@
-import { useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { useEffect, useMemo, useState } from "react"
 
-import {
-  obterUsuarios,
-} from "../../data/usuarios"
-
-import {
-  obterPacientes,
-} from "../../data/paciente"
-
-import {
-  obterConsultas,
-} from "../../data/consultas"
-
-import {
-  actualizarEstadoUtilizador,
-} from "../../data/gestaoAdministrativa"
+import { adminAPI, consultasAPI } from "../../services/api"
 
 function GerirUtilizadores() {
   const [usuarios, setUsuarios] =
-    useState(() => obterUsuarios())
+    useState([])
 
   const [pacientes, setPacientes] =
-    useState(() => obterPacientes())
+    useState([])
 
   const [consultas, setConsultas] =
-    useState(() => obterConsultas())
+    useState([])
 
   const [pesquisa, setPesquisa] =
     useState("")
@@ -42,11 +27,28 @@ function GerirUtilizadores() {
   const [pacienteSelecionado, setPacienteSelecionado] =
     useState(null)
 
-  function recarregar() {
-    setUsuarios(obterUsuarios())
-    setPacientes(obterPacientes())
-    setConsultas(obterConsultas())
+  async function recarregar() {
+    try {
+      const [usuariosResponse, consultasResponse] = await Promise.all([
+        adminAPI.listarUtilizadores({ tipo: "paciente" }),
+        consultasAPI.listar(),
+      ])
+      const lista = usuariosResponse.data.dados || []
+      setUsuarios(lista)
+      setPacientes(lista.filter((usuario) => usuario.paciente).map((usuario) => ({
+        ...usuario.paciente,
+        usuario_id: usuario.id,
+      })))
+      setConsultas(consultasResponse.data.dados || [])
+      setErro("")
+    } catch (error) {
+      setErro(error?.message || "Não foi possível carregar os utilizadores.")
+    }
   }
+
+  useEffect(() => {
+    Promise.resolve().then(recarregar)
+  }, [])
 
   function limparMensagens() {
     setMensagem("")
@@ -194,11 +196,11 @@ function GerirUtilizadores() {
       0
     )
 
-  function alterarEstado(item) {
+  async function alterarEstado(item) {
     limparMensagens()
 
     try {
-      actualizarEstadoUtilizador(
+      await adminAPI.alterarEstadoUtilizador(
         item.usuario.id,
         item.usuario.ativo === false
       )

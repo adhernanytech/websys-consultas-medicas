@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import PageHeader from "../../components/ui/PageHeader"
 import StatusBadge from "../../components/ui/StatusBadge"
-import { obterUsuarios } from "../../data/usuarios"
-import { actualizarEstadoUtilizador } from "../../data/gestaoAdministrativa"
 import { exportarCSV, exportarPDF } from "../../utils/exportacaoAdmin"
+import { adminAPI } from "../../services/api"
 
 function tipoUsuario(usuario) {
   const tipo = String(usuario?.tipo || usuario?.role || "não definido").trim().toLocaleLowerCase("pt-PT")
@@ -13,13 +12,25 @@ function tipoUsuario(usuario) {
   return tipo.charAt(0).toLocaleUpperCase("pt-PT") + tipo.slice(1)
 }
 function ContasUtilizadoresAdmin() {
-  const [usuarios, setUsuarios] = useState(() => obterUsuarios())
+  const [usuarios, setUsuarios] = useState([])
   const [pesquisa, setPesquisa] = useState("")
   const [tipo, setTipo] = useState("todos")
   const [estado, setEstado] = useState("todos")
   const [mensagem, setMensagem] = useState("")
   const [erro, setErro] = useState("")
-  function recarregar() { setUsuarios(obterUsuarios()); setMensagem(""); setErro("") }
+  async function recarregar() {
+    try {
+      const { data } = await adminAPI.listarUtilizadores()
+      setUsuarios((data.dados || []).map((usuario) => ({
+        ...usuario,
+        criadoEm: usuario.criado_em,
+      })))
+      setErro("")
+    } catch (error) {
+      setErro(error?.message || "Não foi possível carregar as contas.")
+    }
+  }
+  useEffect(() => { Promise.resolve().then(recarregar) }, [])
   const filtrados = useMemo(() => usuarios.filter(u => {
     const termo = pesquisa.trim().toLocaleLowerCase("pt-PT")
     const correspondeTexto = !termo || `${u.id} ${u.nome || ""} ${u.email || ""}`.toLocaleLowerCase("pt-PT").includes(termo)
@@ -27,13 +38,13 @@ function ContasUtilizadoresAdmin() {
     const correspondeEstado = estado === "todos" || (estado === "activos" ? u.ativo !== false : u.ativo === false)
     return correspondeTexto && correspondeTipo && correspondeEstado
   }).sort((a,b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-PT")), [usuarios,pesquisa,tipo,estado])
-  function mudarEstado(usuario) {
+  async function mudarEstado(usuario) {
     const activar = usuario.ativo === false
     const acao = activar ? "activar" : "desactivar"
     if (!window.confirm(`Tem a certeza de que pretende ${acao} a conta de ${usuario.nome || usuario.email}?`)) return
     try {
-      actualizarEstadoUtilizador(usuario.id, activar)
-      setMensagem(`Conta ${activar ? "activada" : "desactivada"} com sucesso.`); setErro(""); setUsuarios(obterUsuarios())
+      await adminAPI.alterarEstadoUtilizador(usuario.id, activar)
+      setMensagem(`Conta ${activar ? "activada" : "desactivada"} com sucesso.`); setErro(""); await recarregar()
     } catch (e) { setErro(e?.message || "Não foi possível alterar o estado da conta.") }
   }
   const cabecalhos = ["ID", "Nome", "Email", "Tipo", "Estado", "Criado em"]

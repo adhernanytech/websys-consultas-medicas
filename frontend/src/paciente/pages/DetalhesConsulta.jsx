@@ -1,12 +1,9 @@
 import { useNavigate, useParams, Link } from "react-router-dom"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
-import { obterConsultaPorId, cancelarConsulta, editarConsulta } from "../../data/consultas"
-import { obterDisponibilidadesDoMedico } from "../../data/disponibilidades"
 import AppIcon from "../../components/ui/AppIcon"
-import { obterUsuarioAutenticado } from "../../data/usuarios"
-import { obterRegistoClinicoPorConsulta } from "../../data/registrosClinicos"
-import { useStorageSync } from "../../hooks/useStorageSync"
+import { useAuth } from "../../context/AuthContext"
+import { consultasAPI, disponibilidadesAPI } from "../../services/api"
 
 export default function DetalhesConsulta() {
   const { id } = useParams()
@@ -15,13 +12,43 @@ export default function DetalhesConsulta() {
   const [novaDisponibilidadeId, setNovaDisponibilidadeId] = useState("")
   const [mensagem, setMensagem] = useState("")
   const [erroAcao, setErroAcao] = useState("")
-  const [, forcarActualizacao] = useState(0)
+  const [consulta, setConsulta] = useState(null)
+  const [registo, setRegisto] = useState(null)
+  const [disponibilidades, setDisponibilidades] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [actualizacao, setActualizacao] = useState(0)
 
-  // Forçar re-render quando consultas ou registos mudam
-  useStorageSync("consultas")
-  useStorageSync("registosClinicos")
+  const { usuario } = useAuth()
 
-  const usuario = obterUsuarioAutenticado()
+  useEffect(() => {
+    let activo = true
+    consultasAPI.obter(id)
+      .then(async ({ data }) => {
+        const consultaActual = data.dados
+        if (!activo) return
+        setConsulta(consultaActual)
+        const pedidos = [
+          disponibilidadesAPI.listar({ medico_id: consultaActual.medicoId }).then(({ data: horarios }) => {
+            if (activo) setDisponibilidades(horarios.dados || [])
+          }),
+        ]
+        if (consultaActual.estado === "Realizada" || consultaActual.estado === "Concluída") {
+          pedidos.push(
+            consultasAPI.obterRegistoClinico(id)
+              .then(({ data: registoResponse }) => { if (activo) setRegisto(registoResponse.dados) })
+              .catch((error) => {
+                if (error.status === 404) {
+                  if (activo) setRegisto(null)
+                } else if (activo) setErroAcao(error.message || "Não foi possível carregar o registo clínico.")
+              })
+          )
+        }
+        await Promise.all(pedidos)
+      })
+      .catch((error) => { if (activo) setErroAcao(error.message || "Não foi possível carregar a consulta.") })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [id, actualizacao])
 
   if (!usuario) {
     navegar("/login")
@@ -38,7 +65,9 @@ export default function DetalhesConsulta() {
     return null
   }
 
-  const consulta = obterConsultaPorId(id)
+  if (carregando) {
+    return <main className="mx-auto max-w-3xl px-4 py-8 text-texto-secundario">A carregar consulta...</main>
+  }
 
   if (!consulta) {
     return (
@@ -59,9 +88,7 @@ export default function DetalhesConsulta() {
     return null
   }
 
-  const registo = obterRegistoClinicoPorConsulta(id, consulta.medicoId)
-
-  function tratarCancelamento() {
+  async function tratarCancelamento() {
     const confirmar = window.confirm(
       "Tem a certeza de que pretende cancelar esta consulta?"
     )
@@ -69,10 +96,10 @@ export default function DetalhesConsulta() {
     if (!confirmar) return
 
     try {
-      cancelarConsulta(id, usuario.id)
+      await consultasAPI.alterarEstado(id, "cancelada")
       setMensagem("A consulta foi cancelada com sucesso.")
       setErroAcao("")
-      forcarActualizacao((v) => v + 1)
+      setActualizacao((v) => v + 1)
     } catch (erro) {
       setErroAcao(erro.message || "Erro ao cancelar consulta.")
     }
@@ -82,9 +109,11 @@ export default function DetalhesConsulta() {
     consulta.estado === "Agendada" ||
     consulta.estado === "Confirmada"
   const podeReagendar = consulta.estado === "Agendada"
-  const disponibilidades = podeReagendar ? obterDisponibilidadesDoMedico(consulta.medicoId) : []
+  const disponibilidadesParaReagendar = podeReagendar
+    ? disponibilidades.filter((item) => item.estado === "Disponível" && String(item.id) !== String(consulta.disponibilidadeId))
+    : []
 
-  function submeterReagendamento(evento) {
+  async function submeterReagendamento(evento) {
     evento.preventDefault()
     if (!novaDisponibilidadeId) {
       setErroAcao("Seleccione um novo horário disponível.")
@@ -92,12 +121,12 @@ export default function DetalhesConsulta() {
     }
     if (!window.confirm("Confirma que pretende reagendar esta consulta para o novo horário?")) return
     try {
-      editarConsulta(id, usuario.id, { disponibilidadeId: novaDisponibilidadeId, motivo: consulta.motivo })
+      await consultasAPI.actualizar(id, { disponibilidade_id: String(novaDisponibilidadeId), motivo: consulta.motivo })
       setMensagem("A consulta foi reagendada com sucesso.")
       setErroAcao("")
       setMostrarReagendamento(false)
       setNovaDisponibilidadeId("")
-      forcarActualizacao((v) => v + 1)
+      setActualizacao((v) => v + 1)
     } catch (erro) {
       setErroAcao(erro.message || "Não foi possível reagendar a consulta.")
     }
@@ -264,11 +293,11 @@ export default function DetalhesConsulta() {
             {mostrarReagendamento && podeReagendar && <form onSubmit={submeterReagendamento} className="mt-5 border-t border-gray-100 pt-5">
               <h4 className="font-semibold text-gray-900">Escolher novo horário</h4>
               <p className="mt-1 text-xs leading-5 text-gray-500">Só pode reagendar uma consulta ainda agendada. O novo horário tem de pertencer ao mesmo médico.</p>
-              {disponibilidades.length === 0 ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Este médico não tem outros horários disponíveis neste momento.</p> : <>
+              {disponibilidadesParaReagendar.length === 0 ? <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Este médico não tem outros horários disponíveis neste momento.</p> : <>
                 <label htmlFor="novo-horario-consulta" className="mt-3 block text-sm font-medium text-gray-700">Disponibilidade</label>
                 <select id="novo-horario-consulta" value={novaDisponibilidadeId} onChange={(e) => setNovaDisponibilidadeId(e.target.value)} required className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm">
                   <option value="">Seleccione uma data e hora</option>
-                  {disponibilidades.map((item) => <option key={item.id} value={item.id}>{new Date(`${item.data}T12:00:00`).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })} · {item.horaInicio}–{item.horaFim}</option>)}
+                  {disponibilidadesParaReagendar.map((item) => <option key={item.id} value={item.id}>{new Date(`${item.data}T12:00:00`).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })} · {item.horaInicio}–{item.horaFim}</option>)}
                 </select>
                 <button type="submit" className="mt-3 w-full rounded-lg bg-primaria px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90">Confirmar reagendamento</button>
               </>}

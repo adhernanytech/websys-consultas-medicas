@@ -1,9 +1,6 @@
+import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
-
-import { obterUsuarioAutenticado, obterUsuarios } from "../../data/usuarios"
-import { obterMedicoDaConta } from "../../data/medicos"
-import { obterConsultasDoMedico } from "../../data/consultas"
-import { obterRegistosClinicosDoMedicoEPaciente } from "../../data/registrosClinicos"
+import { consultasAPI, medicosAPI, registosClinicosAPI } from "../../services/api"
 
 function formatarData(data) {
   if (!data) return "Data não disponível"
@@ -41,14 +38,39 @@ function obterClasseEstado(estado) {
 
 function PerfilPacienteMedico() {
   const { pacienteId } = useParams()
+  const [medico, setMedico] = useState(null)
+  const [consultasDoMedico, setConsultasDoMedico] = useState([])
+  const [registosDisponiveis, setRegistosDisponiveis] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState("")
 
-  const usuarioMedico = obterUsuarioAutenticado()
+  useEffect(() => {
+    let activo = true
+    Promise.all([
+      medicosAPI.obterMeu(),
+      consultasAPI.listar(),
+      registosClinicosAPI.listar(),
+    ])
+      .then(([medicoResponse, consultasResponse, registosResponse]) => {
+        if (!activo) return
+        setMedico(medicoResponse.data.dados)
+        setConsultasDoMedico(consultasResponse.data.dados || [])
+        setRegistosDisponiveis(registosResponse.data.dados || [])
+      })
+      .catch((errorApi) => {
+        if (activo) setErro(errorApi.message || "Não foi possível carregar o perfil do paciente.")
+      })
+      .finally(() => {
+        if (activo) setCarregando(false)
+      })
+    return () => { activo = false }
+  }, [])
 
-  const medico = usuarioMedico
-    ? obterMedicoDaConta(usuarioMedico.id)
-    : null
+  if (carregando) {
+    return <main className="min-h-[70vh] p-8 text-center text-gray-600">A carregar perfil do paciente...</main>
+  }
 
-  if (!usuarioMedico || !medico) {
+  if (!medico) {
     return (
       <main className="min-h-[70vh] bg-gray-50 px-4 py-12">
         <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 text-center shadow-sm">
@@ -57,7 +79,7 @@ function PerfilPacienteMedico() {
           </h1>
 
           <p className="mt-3 text-gray-600">
-            Não foi possível identificar o médico autenticado.
+            {erro || "Não foi possível identificar o médico autenticado."}
           </p>
         </div>
       </main>
@@ -67,8 +89,6 @@ function PerfilPacienteMedico() {
   /*
    * Obtemos apenas as consultas deste médico.
    */
-  const consultasDoMedico = obterConsultasDoMedico(medico.id)
-
   /*
    * Procuramos as consultas deste médico com o paciente.
    */
@@ -76,9 +96,9 @@ function PerfilPacienteMedico() {
     (consulta) =>
       String(consulta.pacienteId) === String(pacienteId)
   )
-  const registosClinicos = obterRegistosClinicosDoMedicoEPaciente(
-    medico.id,
-    pacienteId
+  const consultasIdsPaciente = new Set(consultasDoPaciente.map((consulta) => String(consulta.id)))
+  const registosClinicos = registosDisponiveis.filter((registo) =>
+    consultasIdsPaciente.has(String(registo.consultaId))
   )
 
   /*
@@ -121,41 +141,18 @@ function PerfilPacienteMedico() {
   /*
    * Procuramos os dados do paciente na tabela de utilizadores.
    */
-  const usuarios = obterUsuarios()
-
-  const paciente = usuarios.find(
-    (usuario) =>
-      String(usuario.id) === String(pacienteId) &&
-      (
-        usuario.tipo === "paciente" ||
-        usuario.role === "paciente"
-      )
-  )
-
   /*
    * Mantemos alguns dados da própria consulta como fallback.
    */
   const primeiraConsulta = consultasDoPaciente[0]
 
-  const nomePaciente =
-    paciente?.nome ||
-    primeiraConsulta?.pacienteNome ||
-    "Paciente"
+  const nomePaciente = primeiraConsulta?.pacienteNome || "Paciente"
 
-  const emailPaciente =
-    paciente?.email ||
-    primeiraConsulta?.pacienteEmail ||
-    "Não informado"
+  const emailPaciente = primeiraConsulta?.pacienteEmail || "Não informado"
 
-  const telefonePaciente =
-    paciente?.telefone ||
-    "Não informado"
+  const telefonePaciente = primeiraConsulta?.pacienteTelefone || "Não informado"
 
-  const fotografia =
-    paciente?.foto ||
-    paciente?.fotografia ||
-    paciente?.imagem ||
-    null
+  const fotografia = null
 
   /*
    * Histórico mais recente primeiro.

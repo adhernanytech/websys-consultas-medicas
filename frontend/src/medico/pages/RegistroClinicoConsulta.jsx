@@ -1,14 +1,8 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 
-import { obterUsuarioAutenticado } from "../../data/usuarios"
-import { obterMedicoDaConta } from "../../data/medicos"
-import { obterConsultasDoMedico } from "../../data/consultas"
-
-import {
-  obterRegistoClinicoPorConsulta,
-  guardarRegistoClinico,
-} from "../../data/registrosClinicos"
+import { useAuth } from "../../context/AuthContext"
+import { consultasAPI, medicosAPI } from "../../services/api"
 
 function formatarData(data) {
   if (!data) return "Data não disponível"
@@ -24,11 +18,7 @@ function formatarData(data) {
   return `${dia}/${mes}/${ano}`
 }
 
-function obterFormularioRegisto(consultaId, consulta) {
-  const registo = consulta
-    ? obterRegistoClinicoPorConsulta(consulta.id, consulta.medicoId)
-    : null
-
+function obterFormularioRegisto(consultaId, registo) {
   return {
     consultaId,
     queixa: registo?.queixa || "",
@@ -41,24 +31,14 @@ function obterFormularioRegisto(consultaId, consulta) {
 function RegistroClinicoConsulta() {
   const { id } = useParams()
 
-  const usuario = obterUsuarioAutenticado()
-
-  const medico = usuario
-    ? obterMedicoDaConta(usuario.id)
-    : null
-
-  const consulta = medico
-    ? obterConsultasDoMedico(medico.id).find(
-        (item) => String(item.id) === String(id)
-      ) || null
-    : null
+  const { usuario } = useAuth()
+  const [medico, setMedico] = useState(null)
+  const [consulta, setConsulta] = useState(null)
+  const [registo, setRegisto] = useState(null)
+  const [carregando, setCarregando] = useState(true)
   const [formulario, setFormulario] = useState(() =>
-    obterFormularioRegisto(id, consulta)
+    obterFormularioRegisto(id, null)
   )
-
-  if (formulario.consultaId !== id) {
-    setFormulario(obterFormularioRegisto(id, consulta))
-  }
 
   const [mensagem, setMensagem] = useState("")
   const [erro, setErro] = useState("")
@@ -67,7 +47,29 @@ function RegistroClinicoConsulta() {
     consulta?.estado === "Realizada" ||
     consulta?.estado === "Concluída"
 
-  function guardar() {
+  useEffect(() => {
+    let activo = true
+    Promise.all([
+      medicosAPI.obterMeu(),
+      consultasAPI.obter(id),
+      consultasAPI.obterRegistoClinico(id).catch((error) => {
+        if (error.status === 404) return { data: { dados: null } }
+        throw error
+      }),
+    ])
+      .then(([medicoResponse, consultaResponse, registoResponse]) => {
+        if (!activo) return
+        setMedico(medicoResponse.data.dados)
+        setConsulta(consultaResponse.data.dados)
+        setRegisto(registoResponse.data.dados)
+        setFormulario(obterFormularioRegisto(id, registoResponse.data.dados))
+      })
+      .catch((error) => { if (activo) setErro(error.message || "Não foi possível carregar os dados da consulta.") })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [id])
+
+  async function guardar() {
     setMensagem("")
     setErro("")
 
@@ -86,15 +88,16 @@ function RegistroClinicoConsulta() {
     try {
       setAGuardar(true)
 
-      guardarRegistoClinico({
-        consultaId: consulta.id,
-        pacienteId: consulta.pacienteId,
-        medicoId: medico.id,
-        queixa: formulario.queixa,
+      const payload = {
+        queixa_principal: formulario.queixa,
         observacoes: formulario.observacoes,
         diagnostico: formulario.diagnostico,
         tratamento: formulario.tratamento,
-      })
+      }
+      const { data } = registo
+        ? await consultasAPI.actualizarRegistoClinico(consulta.id, payload)
+        : await consultasAPI.criarRegistoClinico(consulta.id, payload)
+      setRegisto(data.dados)
 
       setMensagem(
         "Registo clínico guardado com sucesso."
@@ -107,6 +110,10 @@ function RegistroClinicoConsulta() {
     } finally {
       setAGuardar(false)
     }
+  }
+
+  if (carregando) {
+    return <main className="min-h-[70vh] bg-gray-50 px-4 py-12 text-center text-gray-600">A carregar consulta e registo clínico...</main>
   }
 
   if (!usuario || !medico) {

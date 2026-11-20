@@ -1,12 +1,8 @@
-import { registarAccaoUtilizador } from "../../data/auditoriaAdmin";
-﻿import { useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
-import {
-  obterUsuarioAutenticado,
-  actualizarUsuario
-} from "../../data/usuarios"
-import { useStorageSync } from "../../hooks/useStorageSync"
+import { pacientesAPI } from "../../services/api"
+import { useAuth } from "../../context/AuthContext"
 
 import { prepararImagem } from "../../utils/imagem"
 
@@ -14,9 +10,7 @@ import { prepararImagem } from "../../utils/imagem"
 function PerfilPaciente() {
 
   const navegar = useNavigate()
-  
-  // Forçar re-render quando utilizadores mudam
-  useStorageSync("usuarios")
+  const { usuario, actualizarUsuario: actualizarSessao } = useAuth()
   
   // Todos os hooks no topo, antes de qualquer lógica condicional
   const [modoEdicao, setModoEdicao] = useState(false)
@@ -24,8 +18,7 @@ function PerfilPaciente() {
   const [guardando, setGuardando] = useState(false)
   const [mensagem, setMensagem] = useState("")
   const [erro, setErro] = useState("")
-  
-  const usuario = obterUsuarioAutenticado()
+  const [carregando, setCarregando] = useState(true)
   
   const [formulario, setFormulario] = useState({
     nome: usuario?.nome || "",
@@ -35,6 +28,19 @@ function PerfilPaciente() {
   const [fotoPrevisualizacao, setFotoPrevisualizacao] = useState(
     usuario?.foto || null
   )
+
+  useEffect(() => {
+    let activo = true
+    pacientesAPI.obterMeu()
+      .then(({ data }) => {
+        if (!activo) return
+        const dados = data.dados
+        setFormulario({ nome: dados.usuario?.nome || usuario?.nome || "", telefone: dados.telefone || "" })
+      })
+      .catch((error) => { if (activo) setErro(error.message || "Não foi possível carregar o perfil.") })
+      .finally(() => { if (activo) setCarregando(false) })
+    return () => { activo = false }
+  }, [usuario?.nome])
 
   // Verificações de autenticação
   if (!usuario) {
@@ -150,7 +156,7 @@ function PerfilPaciente() {
      GUARDAR ALTERAÃ‡Ã•ES
    */
 
-  function guardarAlteracoes(evento) {
+  async function guardarAlteracoes(evento) {
 
     evento.preventDefault()
 
@@ -197,39 +203,14 @@ function PerfilPaciente() {
 
     try {
 
-      const usuarioAtualizado =
-        actualizarUsuario(
-          usuario.id,
-          {
-            nome,
-            telefone,
-            foto: fotoPrevisualizacao || null
-          }
-        )
-
-
-      if (!usuarioAtualizado) {
-
-        setErro(
-          "NÃ£o foi possÃ­vel actualizar os dados."
-        )
-
-        return
-      }
-
-
-      registarAccaoUtilizador("Perfil actualizado", "perfil de paciente", `Dados de perfil actualizados para o utilizador ID ${usuarioAtualizado.id}`)
+      const { data } = await pacientesAPI.actualizarMeu({ nome, telefone })
+      const pacienteActualizado = data.dados
+      actualizarSessao({ nome: pacienteActualizado.usuario?.nome || nome })
 
       setFormulario({
-        nome: usuarioAtualizado.nome || "",
-        telefone:
-          usuarioAtualizado.telefone || ""
+        nome: pacienteActualizado.usuario?.nome || nome,
+        telefone: pacienteActualizado.telefone || ""
       })
-
-      setFotoPrevisualizacao(
-        usuarioAtualizado.foto || null
-      )
-
 
       setModoEdicao(false)
 
@@ -238,12 +219,7 @@ function PerfilPaciente() {
       )
 
     } catch (erro) {
-
-      console.error(erro)
-
-      setErro(
-        "Ocorreu um erro ao actualizar o perfil."
-      )
+      setErro(erro.message || "Ocorreu um erro ao actualizar o perfil.")
 
     } finally {
 
@@ -262,6 +238,9 @@ function PerfilPaciente() {
     return null
   }
 
+  if (carregando) {
+    return <main className="mx-auto max-w-xl p-8 text-texto-secundario">A carregar perfil...</main>
+  }
 
   const inicial =
     usuario.nome?.charAt(0)?.toUpperCase() || "P"
@@ -839,5 +818,3 @@ function PerfilPaciente() {
 }
 
 export default PerfilPaciente
-
-

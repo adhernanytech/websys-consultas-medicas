@@ -1,21 +1,33 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import DoctorCard from "../components/CardMedico"
-import { obterMedicos } from "../data/medicos"
-import { obterUsuarioPorId } from "../data/usuarios"
-import { obterEspecialidades } from "../data/especialidades"
+import { especialidadesAPI, medicosAPI } from "../services/api"
 import AppIcon from "../components/ui/AppIcon"
 
 function Home() {
   const [pesquisa, setPesquisa] = useState("")
   const [mensagemPesquisa, setMensagemPesquisa] = useState("")
+  const [medicos, setMedicos] = useState([])
+  const [especialidades, setEspecialidades] = useState([])
+  const [erroApi, setErroApi] = useState("")
   const navegar = useNavigate()
 
-  const medicosActivos = obterMedicos().filter((medico) => {
-    const conta = obterUsuarioPorId(medico.usuarioId)
-    return Boolean(conta) && conta.ativo !== false
-  })
-  const especialidadesActivas = obterEspecialidades().filter((item) => item.ativo !== false)
+  useEffect(() => {
+    let activo = true
+    Promise.all([medicosAPI.listar(), especialidadesAPI.listar()])
+      .then(([medicosResponse, especialidadesResponse]) => {
+        if (!activo) return
+        setMedicos(medicosResponse.data.dados || [])
+        setEspecialidades(especialidadesResponse.data.dados || [])
+      })
+      .catch((error) => {
+        if (activo) setErroApi(error.message || "Não foi possível carregar os dados.")
+      })
+    return () => { activo = false }
+  }, [])
+
+  const medicosActivos = medicos
+  const especialidadesActivas = especialidades.filter((item) => item.ativo !== false)
   const medicosDestaque = medicosActivos.slice(0, 3)
   const especialidadesDestaque = especialidadesActivas.slice(0, 4)
 
@@ -62,6 +74,7 @@ function Home() {
               </button>
             </form>
             {mensagemPesquisa && <p role="alert" className="mt-2 text-sm text-erro">{mensagemPesquisa}</p>}
+            {erroApi && <p role="alert" className="mt-2 text-sm text-erro">{erroApi}</p>}
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <Link to="/medicos" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primaria px-6 py-3.5 font-semibold text-white transition hover:bg-primaria-hover">
                 Encontrar um médico <AppIcon name="arrow-right" size={18} />
@@ -115,6 +128,25 @@ function Home() {
               <div><h2 className="font-bold text-texto">{item.title}</h2><p className="mt-1 text-sm leading-6 text-texto-secundario">{item.text}</p></div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16 lg:px-10">
+        <div className="grid gap-6 overflow-hidden rounded-3xl bg-white p-5 shadow-sm sm:p-7 lg:grid-cols-[.8fr_1.2fr] lg:items-center">
+          <div className="py-2">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-primaria">Centro Médico Wenji Maka</p>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight text-texto sm:text-3xl">Um espaço de cuidado e acompanhamento</h2>
+            <p className="mt-4 leading-7 text-texto-secundario">Conheça o Centro, explore as especialidades disponíveis e encontre o profissional mais adequado para si.</p>
+            <Link to="/sobre" className="mt-5 inline-flex items-center gap-2 font-semibold text-primaria hover:text-primaria-hover">
+              Saiba mais sobre o Centro <AppIcon name="arrow-right" size={18} />
+            </Link>
+          </div>
+          <img
+            src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1400&q=85"
+            alt="Espaço clínico moderno e luminoso"
+            loading="lazy"
+            className="h-64 w-full rounded-2xl object-cover sm:h-80"
+          />
         </div>
       </section>
 

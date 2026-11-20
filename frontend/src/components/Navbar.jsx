@@ -18,7 +18,7 @@ function Navbar() {
         <div className="flex min-h-[76px] items-center justify-between gap-4">
           <Link to="/" onClick={fecharMenu} className="flex shrink-0 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-primaria shadow-sm"><AppIcon name="clinic" size={24} /></span>
-            <span><strong className="block text-lg leading-tight tracking-tight sm:text-xl">Wenji Maka</strong><span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/75">Centro Médico</span></span>
+            <span><strong className="block text-lg leading-tight tracking-tight sm:text-xl">Wenji Maka II</strong><span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/75">Centro Médico</span></span>
           </Link>
           <div className="hidden items-center gap-1 lg:flex">
             {links.map((link) => <NavLink key={link.to} to={link.to} end={link.end} className={estiloLink}>{link.label}</NavLink>)}

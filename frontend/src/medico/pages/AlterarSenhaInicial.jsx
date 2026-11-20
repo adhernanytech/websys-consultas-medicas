@@ -1,19 +1,10 @@
-import { registarAccaoUtilizador } from "../../data/auditoriaAdmin";
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-import {
-  obterUsuarios,
-  guardarUsuarios,
-  obterUsuarioAutenticado,
-  guardarUsuarioAutenticado,
-  usuarioIsMedico,
-} from "../../data/usuarios";
+import { useAuth } from "../../context/AuthContext";
 
 function AlterarSenhaInicial() {
   const navegar = useNavigate();
-  const usuario = obterUsuarioAutenticado();
+  const { usuario, deveAlterarSenha, alterarSenhaInicial } = useAuth();
 
   const [senha, setSenha] = useState("");
   const [confirmacao, setConfirmacao] = useState("");
@@ -22,12 +13,12 @@ function AlterarSenhaInicial() {
   const [tipoMensagem, setTipoMensagem] = useState("");
   const [carregando, setCarregando] = useState(false);
 
-  function submeterFormulario(evento) {
+  async function submeterFormulario(evento) {
     evento.preventDefault();
     setMensagem("");
     setTipoMensagem("");
 
-    if (!usuario || !usuarioIsMedico(usuario)) {
+    if (!usuario || usuario.tipo !== "medico") {
       navegar("/login", { replace: true });
       return;
     }
@@ -40,22 +31,14 @@ function AlterarSenhaInicial() {
       return;
     }
 
-    if (usuario.deveAlterarSenha !== true) {
+    if (!deveAlterarSenha) {
       navegar("/medico/dashboard", { replace: true });
       return;
     }
 
-    if (senha.length < 8) {
+    if (senha.length < 12) {
       setMensagem(
-        "A nova palavra-passe deve ter pelo menos 8 caracteres."
-      );
-      setTipoMensagem("erro");
-      return;
-    }
-
-    if (senha === usuario.senha || senha === usuario.password) {
-      setMensagem(
-        "A nova palavra-passe deve ser diferente da palavra-passe inicial."
+        "A nova palavra-passe deve ter pelo menos 12 caracteres."
       );
       setTipoMensagem("erro");
       return;
@@ -70,50 +53,7 @@ function AlterarSenhaInicial() {
     setCarregando(true);
 
     try {
-      const usuarios = obterUsuarios();
-
-      const indice = usuarios.findIndex(
-        (item) => String(item.id) === String(usuario.id)
-      );
-
-      if (indice === -1) {
-        throw new Error("Não foi possível encontrar a sua conta.");
-      }
-
-      const usuarioActual = usuarios[indice];
-
-      if (usuarioActual.ativo === false) {
-        throw new Error(
-          "A sua conta foi desactivada. Contacte o administrador."
-        );
-      }
-
-      if (usuarioActual.deveAlterarSenha !== true) {
-        navegar("/medico/dashboard", { replace: true });
-        return;
-      }
-
-      const usuarioActualizado = {
-        ...usuarioActual,
-        senha,
-        deveAlterarSenha: false,
-        actualizadoEm: new Date().toISOString(),
-      };
-
-      // Remove o campo antigo, caso exista, para impedir que
-      // a palavra-passe inicial continue válida pelo campo "password".
-      delete usuarioActualizado.password;
-
-      usuarios[indice] = usuarioActualizado;
-      guardarUsuarios(usuarios);
-
-      guardarUsuarioAutenticado({
-        ...usuarioActualizado,
-        role: "medico",
-        tipo: "medico",
-      });
-      registarAccaoUtilizador("Palavra-passe inicial alterada", "segurança da conta", `Alteração obrigatória concluída para o médico ID ${usuarioActualizado.id}`)
-
+      await alterarSenhaInicial(senha, confirmacao);
       setMensagem("Palavra-passe alterada com sucesso.");
       setTipoMensagem("sucesso");
 
@@ -128,7 +68,7 @@ function AlterarSenhaInicial() {
     }
   }
 
-  if (!usuario || !usuarioIsMedico(usuario)) {
+  if (!usuario || usuario.tipo !== "medico") {
     return null;
   }
 
@@ -163,10 +103,10 @@ function AlterarSenhaInicial() {
               value={senha}
               onChange={(evento) => setSenha(evento.target.value)}
               autoComplete="new-password"
-              minLength={8}
+              minLength={12}
               required
               className="w-full rounded-lg border border-borda px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primaria"
-              placeholder="Mínimo de 8 caracteres"
+              placeholder="Mínimo de 12 caracteres"
             />
           </div>
 
