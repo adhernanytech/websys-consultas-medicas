@@ -49,4 +49,4 @@ async function actualizar(req, res) {
   return res.json({ mensagem: "Registo clínico actualizado.", dados });
 }
 
-export { listar, obter, obterPorConsulta, criar, actualizar };
+module.exports = { listar, obter, obterPorConsulta, criar, actualizar };
