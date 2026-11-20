@@ -1,5 +1,5 @@
-import service from "../services/registosClinicosService";
-import { parseId } from "../utils/http";
+const service = require("../services/registosClinicosService");
+const { parseId } = require("../utils/http");
 
 async function listar(req, res) {
   const consultaId = req.query.consulta_id
