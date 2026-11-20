@@ -6,10 +6,8 @@ export default function PacienteLayout() {
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-64">
       <NavbarPaciente />
-      <div className="flex min-h-screen flex-col">
-        <div className="flex-1"><Outlet /></div>
-        <Footer compacto />
-      </div>
+      <main className="min-h-[calc(100vh-70px)]"><Outlet /></main>
+      <Footer compacto />
     </div>
   )
 }

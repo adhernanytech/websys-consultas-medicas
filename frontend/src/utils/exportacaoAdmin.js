@@ -27,7 +27,7 @@ function escaparHTML(valor) {
     .replace(/'/g, "&#039;")
 }
 
-/** Abre um relatório formatado para impressão; no diálogo, escolher «Guardar como PDF». */
+
 export function exportarPDF(titulo, subtitulo, cabecalhos, linhas, nomeDocumento = "relatorio") {
   const janela = window.open("", "_blank", "width=1000,height=750")
   if (!janela) {
